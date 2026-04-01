@@ -177,7 +177,7 @@ const WasteEfficiencyTab = () => {
 const QCWasteTrendTab = () => {
   const dailyWasteData = useMemo(() => {
     // Group QC fails by date
-    const fails = QC_CHECKS.filter(qc => qc.result === 'Fail' && qc.wasteCost > 0);
+    const fails = (QC_CHECKS || []).filter(qc => qc.result === 'Fail' && qc.wasteCost > 0);
     const grouped = fails.reduce((acc: any, curr) => {
       const date = curr.checkDate;
       acc[date] = (acc[date] || 0) + curr.wasteCost;
@@ -216,7 +216,7 @@ const OutputPredictionTab = () => {
   const [wasteOverride, setWasteOverride] = useState(1.5);
   
   const activeBatches = useMemo(() => {
-    return PRODUCTION_BATCHES.filter(b => b.status === 'In Progress').map(b => {
+    return (PRODUCTION_BATCHES || []).filter(b => b.status === 'In Progress').map(b => {
       const recipe = RECIPES.find(r => r.id === b.recipeId);
       const predicted = Math.floor(b.plannedQty * (1 - wasteOverride / 100));
       return {
@@ -316,7 +316,7 @@ const OutputPredictionTab = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-charcoal/5">
-              {INGREDIENTS.slice(0, 6).map(ing => {
+              {(INGREDIENTS || []).slice(0, 6).map(ing => {
                 const multiplier = 1 / (1 - wasteOverride / 100);
                 const bomQty = 100; // Mocked base
                 return (

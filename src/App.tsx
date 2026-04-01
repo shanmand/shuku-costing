@@ -173,22 +173,22 @@ const TopBar = () => {
     const results: any[] = [];
     
     // Batches
-    PRODUCTION_BATCHES.filter(b => b.id.toLowerCase().includes(query)).forEach(b => 
+    (PRODUCTION_BATCHES || []).filter(b => b.id.toLowerCase().includes(query)).forEach(b => 
       results.push({ id: b.id, name: `Batch ${b.id}`, type: 'Production', path: '/production', icon: Factory })
     );
     
     // Ingredients
-    INGREDIENTS.filter(i => i.name.toLowerCase().includes(query)).forEach(i => 
+    (INGREDIENTS || []).filter(i => i.name.toLowerCase().includes(query)).forEach(i => 
       results.push({ id: i.id, name: i.name, type: 'Ingredient', path: '/ingredients', icon: FlaskConical })
     );
     
     // SKUs
-    SKUS.filter(s => s.name.toLowerCase().includes(query)).forEach(s => 
+    (SKUS || []).filter(s => s.name.toLowerCase().includes(query)).forEach(s => 
       results.push({ id: s.id, name: s.name, type: 'SKU', path: '/skus', icon: Package })
     );
     
     // Recipes
-    RECIPES.filter(r => r.name.toLowerCase().includes(query)).forEach(r => 
+    (RECIPES || []).filter(r => r.name.toLowerCase().includes(query)).forEach(r => 
       results.push({ id: r.id, name: r.name, type: 'Recipe', path: '/recipes', icon: BookOpen })
     );
     
@@ -201,11 +201,11 @@ const TopBar = () => {
     const today = new Date();
     
     // Expiring Batches (within 7 days)
-    INGREDIENT_BATCHES.forEach(batch => {
+    (INGREDIENT_BATCHES || []).forEach(batch => {
       const expiry = new Date(batch.expiryDate);
       const diff = (expiry.getTime() - today.getTime()) / (1000 * 3600 * 24);
       if (diff > 0 && diff <= 7) {
-        const ing = INGREDIENTS.find(i => i.id === batch.ingredientId);
+        const ing = (INGREDIENTS || []).find(i => i.id === batch.ingredientId);
         alerts.push({
           id: `exp-${batch.id}`,
           title: 'Batch Expiring Soon',
@@ -218,7 +218,7 @@ const TopBar = () => {
     });
     
     // Compliance Due (within 14 days)
-    COMPLIANCE_RECORDS.forEach(rec => {
+    (COMPLIANCE_RECORDS || []).forEach(rec => {
       const audit = new Date(rec.nextAuditDate);
       const diff = (audit.getTime() - today.getTime()) / (1000 * 3600 * 24);
       if (diff > 0 && diff <= 14) {
@@ -234,7 +234,7 @@ const TopBar = () => {
     });
     
     // Low Stock
-    INGREDIENTS.filter(i => i.currentStock < i.reorderLevel).forEach(i => {
+    (INGREDIENTS || []).filter(i => i.currentStock < i.reorderLevel).forEach(i => {
       alerts.push({
         id: `stock-${i.id}`,
         title: 'Low Stock Alert',

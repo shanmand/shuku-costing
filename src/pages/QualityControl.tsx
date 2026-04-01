@@ -77,7 +77,7 @@ const QCChecksTab = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredChecks = useMemo(() => {
-    return QC_CHECKS.filter(qc => 
+    return (QC_CHECKS || []).filter(qc => 
       qc.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       qc.checkType.toLowerCase().includes(searchTerm.toLowerCase()) ||
       qc.checkedBy.toLowerCase().includes(searchTerm.toLowerCase())
@@ -210,7 +210,7 @@ const QCChecksTab = () => {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-charcoal/40 uppercase tracking-widest ml-1">Select Batch</label>
                     <select className="w-full p-4 bg-secondary-cream/50 border border-charcoal/5 rounded-2xl font-bold text-xs uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-honey/20">
-                      {PRODUCTION_BATCHES.map(b => <option key={b.id}>{b.id}</option>)}
+                      {(PRODUCTION_BATCHES || []).map(b => <option key={b.id}>{b.id}</option>)}
                     </select>
                   </div>
                 </div>
@@ -260,7 +260,7 @@ const QCChecksTab = () => {
 
 const QCAnalyticsTab = () => {
   const distributionData = useMemo(() => {
-    const counts = QC_CHECKS.reduce((acc: any, curr) => {
+    const counts = (QC_CHECKS || []).reduce((acc: any, curr) => {
       acc[curr.result] = (acc[curr.result] || 0) + 1;
       return acc;
     }, {});
@@ -272,7 +272,7 @@ const QCAnalyticsTab = () => {
   }, []);
 
   const failureCategories = useMemo(() => {
-    const counts = QC_CHECKS.filter(qc => qc.failureCategory).reduce((acc: any, curr) => {
+    const counts = (QC_CHECKS || []).filter(qc => qc.failureCategory).reduce((acc: any, curr) => {
       acc[curr.failureCategory!] = (acc[curr.failureCategory!] || 0) + 1;
       return acc;
     }, {});
@@ -282,9 +282,9 @@ const QCAnalyticsTab = () => {
   }, []);
 
   const checkTypePerformance = useMemo(() => {
-    const types = Array.from(new Set(QC_CHECKS.map(qc => qc.checkType)));
+    const types = Array.from(new Set((QC_CHECKS || []).map(qc => qc.checkType)));
     return types.map(type => {
-      const typeChecks = QC_CHECKS.filter(qc => qc.checkType === type);
+      const typeChecks = (QC_CHECKS || []).filter(qc => qc.checkType === type);
       const pass = typeChecks.filter(qc => qc.result === 'Pass').length;
       const fail = typeChecks.filter(qc => qc.result === 'Fail').length;
       return { type, pass, fail };
@@ -377,8 +377,8 @@ const QCAnalyticsTab = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-charcoal/5">
-            {INGREDIENT_BATCHES.slice(0, 5).map(batch => {
-              const checks = QC_CHECKS.filter(qc => qc.ingredientBatchId === batch.id);
+            {(INGREDIENT_BATCHES || []).slice(0, 5).map(batch => {
+              const checks = (QC_CHECKS || []).filter(qc => qc.ingredientBatchId === batch.id);
               const total = checks.length;
               const pass = checks.filter(qc => qc.result === 'Pass').length;
               const rate = total > 0 ? (pass / total) * 100 : 0;

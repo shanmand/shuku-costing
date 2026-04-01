@@ -53,8 +53,8 @@ const Badge = ({ children, color = 'gray' }: { children: React.ReactNode, color?
 
 const SKUCard = ({ sku }: { sku: any, key?: any }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const recipe = RECIPES.find(r => r.id === sku.recipeId);
-  const branch = BRANCHES.find(b => b.id === sku.branchId);
+  const recipe = (RECIPES || []).find(r => r.id === sku.recipeId);
+  const branch = (BRANCHES || []).find(b => b.id === sku.branchId);
   
   const margin = ((sku.sellingPrice - sku.standardCost) / sku.sellingPrice) * 100;
   const marginColor = margin > 30 ? 'green' : margin >= 15 ? 'amber' : 'red';
@@ -236,7 +236,7 @@ const NewSKUModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase">Recipe</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
-              {RECIPES.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {(RECIPES || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -246,7 +246,7 @@ const NewSKUModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase">Branch</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
-              {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(BRANCHES || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -291,7 +291,7 @@ export default function SKUsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredSKUs = useMemo(() => {
-    return SKUS.filter(sku => 
+    return (SKUS || []).filter(sku => 
       sku.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sku.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sku.clientName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -318,7 +318,7 @@ export default function SKUsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total SKUs</p>
-          <p className="text-3xl font-black text-gray-900">{SKUS.length}</p>
+          <p className="text-3xl font-black text-gray-900">{(SKUS || []).length}</p>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Avg Margin</p>

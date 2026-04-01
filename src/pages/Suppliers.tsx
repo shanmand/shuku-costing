@@ -91,7 +91,7 @@ const NewSupplierModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
           <div className="space-y-1 col-span-2">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Ingredient Categories Supplied</label>
             <div className="grid grid-cols-3 gap-2 mt-2">
-              {INGREDIENT_CATEGORIES.map(cat => (
+              {(INGREDIENT_CATEGORIES || []).map(cat => (
                 <label key={cat.id} className="flex items-center gap-2 text-xs font-medium text-gray-600 cursor-pointer hover:text-amber-600">
                   <input type="checkbox" className="rounded border-gray-300 text-amber-600 focus:ring-amber-500" />
                   {cat.name}
@@ -114,9 +114,9 @@ const SupplierRow = ({ supplier }: { supplier: typeof SUPPLIERS[0], key?: string
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Calculate performance metric
-  const supplierBatches = INGREDIENT_BATCHES.filter(b => b.supplierId === supplier.id);
+  const supplierBatches = (INGREDIENT_BATCHES || []).filter(b => b.supplierId === supplier.id);
   const supplierBatchIds = supplierBatches.map(b => b.id);
-  const supplierQCs = QC_CHECKS.filter(qc => supplierBatchIds.includes(qc.batchId));
+  const supplierQCs = (QC_CHECKS || []).filter(qc => supplierBatchIds.includes(qc.batchId));
   const passCount = supplierQCs.filter(qc => qc.status === 'Pass').length;
   const performance = supplierQCs.length > 0 ? (passCount / supplierQCs.length) * 100 : 100;
 
@@ -193,7 +193,7 @@ const SupplierRow = ({ supplier }: { supplier: typeof SUPPLIERS[0], key?: string
                       Categories Supplied
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {INGREDIENT_CATEGORIES.slice(0, 3).map(cat => (
+                      {(INGREDIENT_CATEGORIES || []).slice(0, 3).map(cat => (
                         <span key={cat.id} className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-600 shadow-sm">
                           {cat.name}
                         </span>
@@ -219,8 +219,8 @@ const SupplierRow = ({ supplier }: { supplier: typeof SUPPLIERS[0], key?: string
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {supplierBatches.slice(0, 5).map(batch => {
-                            const ingredient = INGREDIENTS.find(i => i.id === batch.ingredientId);
+                          {(supplierBatches || []).slice(0, 5).map(batch => {
+                            const ingredient = (INGREDIENTS || []).find(i => i.id === batch.ingredientId);
                             return (
                               <tr key={batch.id}>
                                 <td className="px-4 py-2 font-mono font-bold text-gray-500">{batch.batchNumber}</td>
@@ -303,7 +303,7 @@ export default function SuppliersPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {SUPPLIERS.map((supplier) => (
+            {(SUPPLIERS || []).map((supplier) => (
               <SupplierRow key={supplier.id} supplier={supplier} />
             ))}
           </tbody>

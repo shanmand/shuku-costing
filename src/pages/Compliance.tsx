@@ -97,7 +97,7 @@ const ScoreCaptureModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Branch</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
-              {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(BRANCHES || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -262,7 +262,7 @@ export default function CompliancePage() {
             </div>
             <select className="px-4 py-3 bg-gray-50 text-gray-600 rounded-xl font-bold border-none outline-none focus:ring-2 focus:ring-amber-500">
               <option value="">All Branches</option>
-              {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(BRANCHES || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
             <select className="px-4 py-3 bg-gray-50 text-gray-600 rounded-xl font-bold border-none outline-none focus:ring-2 focus:ring-amber-500">
               <option value="">All Audit Types</option>
@@ -287,8 +287,8 @@ export default function CompliancePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {COMPLIANCE_RECORDS.map((rec) => {
-                  const branch = BRANCHES.find(b => b.id === rec.branchId);
+                {(COMPLIANCE_RECORDS || []).map((rec) => {
+                  const branch = (BRANCHES || []).find(b => b.id === rec.branchId);
                   const percent = (rec.overallScore / rec.maxScore) * 100;
                   return (
                     <tr key={rec.id} className="hover:bg-gray-50 transition-colors">

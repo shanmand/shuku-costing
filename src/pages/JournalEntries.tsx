@@ -73,8 +73,8 @@ const Badge = ({ children, color = 'gray' }: { children: React.ReactNode, color?
 };
 
 const JournalDetail = ({ journal, onBack }: { journal: JournalEntry, onBack: () => void }) => {
-  const totalDebit = journal.lines.reduce((sum, line) => sum + line.debit, 0);
-  const totalCredit = journal.lines.reduce((sum, line) => sum + line.credit, 0);
+  const totalDebit = (journal.lines || []).reduce((sum, line) => sum + line.debit, 0);
+  const totalCredit = (journal.lines || []).reduce((sum, line) => sum + line.credit, 0);
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
 
   return (

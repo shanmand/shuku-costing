@@ -55,8 +55,8 @@ const BranchCard = ({ branch }: { branch: any, key?: string }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isActive, setIsActive] = useState(branch.isActive);
 
-  const activeBatches = PRODUCTION_BATCHES.filter(b => b.branchId === branch.id && b.status === 'In Progress').length;
-  const activeIngredients = INGREDIENTS.filter(i => i.currentStock > 0).length; // Simplified for demo
+  const activeBatches = (PRODUCTION_BATCHES || []).filter(b => b.branchId === branch.id && b.status === 'In Progress').length;
+  const activeIngredients = (INGREDIENTS || []).filter(i => i.currentStock > 0).length; // Simplified for demo
   const mtdCost = 125400 + (Math.random() * 50000); // Mocked MTD Cost
 
   return (
@@ -189,7 +189,7 @@ export default function BranchesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const costComparisonData = useMemo(() => {
-    return BRANCHES.map(b => ({
+    return (BRANCHES || []).map(b => ({
       name: b.name,
       material: 45000 + (Math.random() * 20000),
       labour: 30000 + (Math.random() * 10000),
@@ -216,7 +216,7 @@ export default function BranchesPage() {
 
       {/* Branch Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        {BRANCHES.map(branch => (
+        {(BRANCHES || []).map(branch => (
           <BranchCard key={branch.id} branch={branch} />
         ))}
       </div>

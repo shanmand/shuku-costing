@@ -22,9 +22,15 @@ import {
   RECIPES, 
   INGREDIENTS, 
   BRANCHES, 
-  MATERIAL_PRICE_HISTORY,
   INGREDIENT_CATEGORIES
 } from '../data/entities';
+import { 
+  Branch, 
+  Ingredient, 
+  Recipe, 
+  RecipeStage 
+} from '../types/entities';
+import { ensureArray } from '../utils/safeData';
 
 // --- Constants ---
 
@@ -55,7 +61,7 @@ const Building2Icon = ({ size }: { size: number }) => (
 );
 
 const getIngredientCost = (ingredientId: string) => {
-  const ingredient = INGREDIENTS.find(i => i.id === ingredientId);
+  const ingredient = (INGREDIENTS || []).find(i => i.id === ingredientId);
   return ingredient?.standardCost || 0;
 };
 
@@ -83,7 +89,7 @@ const Recipes = () => {
     bakingTime: 0,
     coolingTime: 0,
     expectedWaste: 0,
-    branchId: BRANCHES[0]?.id || '',
+    branchId: (BRANCHES || [])[0]?.id || '',
     packagingItems: [] as any[],
     bomLines: [] as any[]
   });
@@ -105,13 +111,13 @@ const Recipes = () => {
       coolingTime: recipe.coolingTime || 0,
       expectedWaste: recipe.expectedWaste || 0,
       branchId: recipe.branchId,
-      packagingItems: recipe.packagingItems.map(item => ({
+      packagingItems: ensureArray<any>(recipe.packagingItems).map(item => ({
         ...item,
         id: (item as any).id || Math.random().toString(),
         cost: (item as any).cost || 0.5
       })),
-      bomLines: recipe.stages.flatMap(stage => 
-        stage.ingredients.map(ing => ({
+      bomLines: ensureArray<RecipeStage>(recipe.stages).flatMap(stage => 
+        ensureArray<any>(stage.ingredients).map(ing => ({
           id: Math.random().toString(),
           stage: stage.name,
           ingredientId: ing.ingredientId,
@@ -124,24 +130,24 @@ const Recipes = () => {
   };
 
   const filteredRecipes = useMemo(() => {
-    return RECIPES.filter(r => 
+    return ensureArray<Recipe>(RECIPES).filter(r => 
       r.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [searchQuery]);
 
   const selectedRecipe = useMemo(() => {
-    return RECIPES.find(r => r.id === selectedRecipeId) || null;
+    return ensureArray<Recipe>(RECIPES).find(r => r.id === selectedRecipeId) || null;
   }, [selectedRecipeId]);
 
   const calculateTotals = (recipe: typeof RECIPES[0]) => {
     let materialTotal = 0;
-    recipe.stages.forEach(stage => {
-      stage.ingredients.forEach(ing => {
+    ensureArray<RecipeStage>(recipe.stages).forEach(stage => {
+      ensureArray<any>(stage.ingredients).forEach(ing => {
         materialTotal += ing.quantity * getIngredientCost(ing.ingredientId);
       });
     });
 
-    const packagingTotal = recipe.packagingItems.reduce((acc, item) => acc + (item.quantity * 0.5), 0);
+    const packagingTotal = ensureArray<any>(recipe.packagingItems).reduce((acc, item) => acc + (item.quantity * 0.5), 0);
     const grandTotal = materialTotal + packagingTotal;
     const costPerUnit = grandTotal / recipe.yieldUnits;
 
@@ -190,30 +196,31 @@ const Recipes = () => {
           <h2 className="text-2xl font-bold text-charcoal">Recipes & Bills of Materials</h2>
           <p className="text-charcoal/60 text-sm">Manage your bakery production formulas and standard costs.</p>
         </div>
-        <button 
-          onClick={() => {
-            setFormData({
-              name: '',
-              version: '1.0',
-              code: '',
-              category: '',
-              status: 'Draft',
-              yieldUnits: 0,
-              yieldUnit: 'Units',
-              yieldWeight: 0,
-              mixTime: 0,
-              provingTime: 0,
-              bakingTemp: 0,
-              bakingTime: 0,
-              coolingTime: 0,
-              expectedWaste: 0,
-              branchId: BRANCHES[0]?.id || '',
-              packagingItems: []
-            });
-            setIsFormOpen(true);
-          }}
-          className="bg-amber-honey text-charcoal px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-amber-600 transition-colors shadow-sm"
-        >
+          <button 
+            onClick={() => {
+              setFormData({
+                name: '',
+                version: '1.0',
+                code: '',
+                category: '',
+                status: 'Draft',
+                yieldUnits: 0,
+                yieldUnit: 'Units',
+                yieldWeight: 0,
+                mixTime: 0,
+                provingTime: 0,
+                bakingTemp: 0,
+                bakingTime: 0,
+                coolingTime: 0,
+                expectedWaste: 0,
+                branchId: ensureArray<Branch>(BRANCHES)[0]?.id || '',
+                packagingItems: [],
+                bomLines: []
+              });
+              setIsFormOpen(true);
+            }}
+            className="bg-amber-honey text-charcoal px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-amber-600 transition-colors shadow-sm"
+          >
           <Plus size={20} />
           New Recipe
         </button>
@@ -234,7 +241,7 @@ const Recipes = () => {
           </div>
 
           <div className="bg-white rounded-lg border border-charcoal/5 shadow-sm overflow-hidden">
-            {filteredRecipes.map((recipe) => (
+            {ensureArray<Recipe>(filteredRecipes).map((recipe) => (
               <button
                 key={recipe.id}
                 onClick={() => setSelectedRecipeId(recipe.id)}
@@ -249,7 +256,7 @@ const Recipes = () => {
                       v{recipe.version}
                     </span>
                     <span className="text-xs text-charcoal/40">
-                      {BRANCHES.find(b => b.id === recipe.branchId)?.name.split('(')[0]}
+                      {ensureArray<Branch>(BRANCHES).find(b => b.id === recipe.branchId)?.name.split('(')[0]}
                     </span>
                   </div>
                 </div>
@@ -275,7 +282,7 @@ const Recipes = () => {
                     </div>
                     <p className="text-charcoal/60 text-sm flex items-center gap-2">
                       <Building2Icon size={14} />
-                      {BRANCHES.find(b => b.id === selectedRecipe.branchId)?.name}
+                      {ensureArray<Branch>(BRANCHES).find(b => b.id === selectedRecipe.branchId)?.name}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -339,7 +346,7 @@ const Recipes = () => {
                   <div className="space-y-8">
                     {/* BOM per Stage */}
                     <div className="space-y-6">
-                      {selectedRecipe.stages.map((stage, sIdx) => (
+                      {ensureArray<RecipeStage>(selectedRecipe.stages).map((stage, sIdx) => (
                         <div key={sIdx} className="space-y-3">
                           <div className="flex items-center gap-2">
                             <div className="w-6 h-6 rounded-full bg-charcoal text-warm-cream flex items-center justify-center text-[10px] font-bold">
@@ -348,7 +355,7 @@ const Recipes = () => {
                             <h4 className="font-bold text-charcoal uppercase tracking-wider text-xs">{stage.name}</h4>
                           </div>
                           
-                          {stage.ingredients.length > 0 ? (
+                          {ensureArray<any>(stage.ingredients).length > 0 ? (
                             <div className="overflow-hidden rounded-lg border border-charcoal/5">
                               <table className="w-full text-sm text-left">
                                 <thead className="bg-secondary-cream/50 text-charcoal/60 text-[10px] uppercase font-bold">
@@ -361,8 +368,8 @@ const Recipes = () => {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {stage.ingredients.map((ing, iIdx) => {
-                                    const ingredient = INGREDIENTS.find(i => i.id === ing.ingredientId);
+                                  {ensureArray<any>(stage.ingredients).map((ing, iIdx) => {
+                                    const ingredient = ensureArray<Ingredient>(INGREDIENTS).find(i => i.id === ing.ingredientId);
                                     const cost = ingredient?.standardCost || 0;
                                     const total = ing.quantity * cost;
                                     return (
@@ -403,13 +410,13 @@ const Recipes = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {selectedRecipe.packagingItems.map((item, idx) => (
+                            {ensureArray<any>(selectedRecipe.packagingItems).map((item, idx) => (
                               <tr key={idx} className="border-t border-charcoal/5 hover:bg-warm-cream transition-colors">
                                 <td className="px-4 py-3 font-medium text-charcoal">{item.name}</td>
                                 <td className="px-4 py-3 text-right font-mono">{item.quantity}</td>
                                 <td className="px-4 py-3 text-charcoal/60">{item.unit}</td>
-                                <td className="px-4 py-3 text-right text-charcoal/60">{formatCurrency(0.5)}</td>
-                                <td className="px-4 py-3 text-right font-bold text-charcoal">{formatCurrency(item.quantity * 0.5)}</td>
+                                <td className="px-4 py-3 text-right text-charcoal/60">{formatCurrency(item.cost || 0.5)}</td>
+                                <td className="px-4 py-3 text-right font-bold text-charcoal">{formatCurrency(item.quantity * (item.cost || 0.5))}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -567,7 +574,7 @@ const Recipes = () => {
                       onChange={(e) => setFormData({...formData, branchId: e.target.value})}
                       className="w-full px-4 py-2 rounded-lg border border-charcoal/10 focus:ring-2 focus:ring-amber-honey/50 outline-none bg-white"
                     >
-                      {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      {ensureArray<Branch>(BRANCHES).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
                   </div>
                 </div>
@@ -690,19 +697,19 @@ const Recipes = () => {
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {formData.bomLines.map((line) => (
+                  {ensureArray<any>(formData.bomLines).map((line) => (
                     <div key={line.id} className="grid grid-cols-12 gap-3 items-end bg-white p-3 rounded-lg border border-charcoal/5 shadow-sm">
                       <div className="col-span-3 space-y-1">
                         <label className="text-[9px] uppercase font-bold text-charcoal/40">Stage</label>
                         <select 
                           value={line.stage}
                           onChange={(e) => {
-                            const newLines = formData.bomLines.map(l => l.id === line.id ? {...l, stage: e.target.value} : l);
+                            const newLines = ensureArray<any>(formData.bomLines).map(l => l.id === line.id ? {...l, stage: e.target.value} : l);
                             setFormData({...formData, bomLines: newLines});
                           }}
                           className="w-full px-2 py-1.5 text-sm rounded border border-charcoal/10 outline-none bg-white"
                         >
-                          {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                          {ensureArray<string>(STAGES).map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
                       <div className="col-span-4 space-y-1">
@@ -710,12 +717,12 @@ const Recipes = () => {
                         <select 
                           value={line.ingredientId}
                           onChange={(e) => {
-                            const newLines = formData.bomLines.map(l => l.id === line.id ? {...l, ingredientId: e.target.value} : l);
+                            const newLines = ensureArray<any>(formData.bomLines).map(l => l.id === line.id ? {...l, ingredientId: e.target.value} : l);
                             setFormData({...formData, bomLines: newLines});
                           }}
                           className="w-full px-2 py-1.5 text-sm rounded border border-charcoal/10 outline-none bg-white"
                         >
-                          {INGREDIENTS.map(ing => <option key={ing.id} value={ing.id}>{ing.name}</option>)}
+                          {ensureArray<Ingredient>(INGREDIENTS).map(ing => <option key={ing.id} value={ing.id}>{ing.name}</option>)}
                         </select>
                       </div>
                       <div className="col-span-2 space-y-1">
@@ -724,7 +731,7 @@ const Recipes = () => {
                           type="number" 
                           value={line.quantity}
                           onChange={(e) => {
-                            const newLines = formData.bomLines.map(l => l.id === line.id ? {...l, quantity: Number(e.target.value)} : l);
+                            const newLines = ensureArray<any>(formData.bomLines).map(l => l.id === line.id ? {...l, quantity: Number(e.target.value)} : l);
                             setFormData({...formData, bomLines: newLines});
                           }}
                           className="w-full px-2 py-1.5 text-sm rounded border border-charcoal/10 outline-none" 
@@ -732,7 +739,7 @@ const Recipes = () => {
                       </div>
                       <div className="col-span-2 space-y-1">
                         <label className="text-[9px] uppercase font-bold text-charcoal/40">Unit</label>
-                        <input type="text" disabled className="w-full px-2 py-1.5 text-sm rounded border border-charcoal/10 bg-charcoal/5 text-charcoal/40" value={INGREDIENTS.find(ing => ing.id === line.ingredientId)?.unit || 'kg'} />
+                        <input type="text" disabled className="w-full px-2 py-1.5 text-sm rounded border border-charcoal/10 bg-charcoal/5 text-charcoal/40" value={ensureArray<Ingredient>(INGREDIENTS).find(ing => ing.id === line.ingredientId)?.unit || 'kg'} />
                       </div>
                       <div className="col-span-1 flex justify-center">
                         <button 
@@ -744,7 +751,7 @@ const Recipes = () => {
                       </div>
                     </div>
                   ))}
-                  {formData.bomLines.length === 0 && (
+                  {ensureArray<any>(formData.bomLines).length === 0 && (
                     <p className="text-xs text-charcoal/30 italic py-4 text-center bg-white rounded-lg border border-dashed border-charcoal/10">
                       No ingredients added yet. Click "+ Add Row" to begin.
                     </p>
@@ -764,14 +771,14 @@ const Recipes = () => {
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {formData.packagingItems.map((item) => (
+                  {ensureArray<any>(formData.packagingItems).map((item) => (
                     <div key={item.id} className="bg-white p-4 rounded-lg border border-charcoal/5 shadow-sm flex items-center justify-between">
                       <div className="flex-1 mr-4">
                         <input 
                           type="text" 
                           value={item.name}
                           onChange={(e) => {
-                            const newItems = formData.packagingItems.map(i => i.id === item.id ? {...i, name: e.target.value} : i);
+                            const newItems = ensureArray<any>(formData.packagingItems).map(i => i.id === item.id ? {...i, name: e.target.value} : i);
                             setFormData({...formData, packagingItems: newItems});
                           }}
                           className="text-sm font-bold bg-transparent border-b border-transparent focus:border-amber-honey outline-none w-full"
@@ -781,12 +788,12 @@ const Recipes = () => {
                             type="number" 
                             value={item.quantity}
                             onChange={(e) => {
-                              const newItems = formData.packagingItems.map(i => i.id === item.id ? {...i, quantity: Number(e.target.value)} : i);
+                              const newItems = ensureArray<any>(formData.packagingItems).map(i => i.id === item.id ? {...i, quantity: Number(e.target.value)} : i);
                               setFormData({...formData, packagingItems: newItems});
                             }}
                             className="text-xs text-charcoal/40 bg-transparent border-b border-transparent focus:border-amber-honey outline-none w-12"
                           />
-                          <span className="text-xs text-charcoal/40">units @ R{item.cost.toFixed(2)}</span>
+                          <span className="text-xs text-charcoal/40">units @ R{(item.cost || 0.5).toFixed(2)}</span>
                         </div>
                       </div>
                       <button 
@@ -797,7 +804,7 @@ const Recipes = () => {
                       </button>
                     </div>
                   ))}
-                  {formData.packagingItems.length === 0 && (
+                  {ensureArray<any>(formData.packagingItems).length === 0 && (
                     <p className="text-xs text-charcoal/30 italic col-span-2 py-4 text-center bg-white rounded-lg border border-dashed border-charcoal/10">
                       No packaging items added yet. Click "+ Add Item" to begin.
                     </p>

@@ -49,9 +49,9 @@ const PermissionsMatrix = ({ role, onUpdate }: any) => {
           </tr>
         </thead>
         <tbody className="divide-y divide-charcoal/5">
-          {MODULES.map(module => {
+            {MODULES.map(module => {
             const moduleKey = module.toLowerCase().replace(/\s+/g, '');
-            const currentLevel = role.permissions[moduleKey] || 'none';
+            const currentLevel = (role.permissions || {})[moduleKey] || 'none';
 
             return (
               <tr key={module} className="hover:bg-secondary-cream/30 transition-colors">
@@ -104,7 +104,7 @@ const RolesTab = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {USER_ROLES.map(role => (
+        {(USER_ROLES || []).map(role => (
           <div 
             key={role.id} 
             onClick={() => handleRoleClick(role)}
@@ -115,21 +115,21 @@ const RolesTab = () => {
                 <ShieldCheck size={20} />
               </div>
               <span className="text-[10px] font-bold text-charcoal/30 bg-secondary-cream px-2 py-1 rounded uppercase tracking-widest">
-                {USERS.filter(u => u.roleId === role.id).length} Users
+                {(USERS || []).filter(u => u.roleId === role.id).length} Users
               </span>
             </div>
             <h4 className="text-lg font-black text-charcoal mb-2">{role.roleName}</h4>
             <div className="flex flex-wrap gap-2">
-              {Object.entries(role.permissions).slice(0, 4).map(([key, value]: any) => (
+              {Object.entries(role.permissions || {}).slice(0, 4).map(([key, value]: any) => (
                 <span key={key} className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-widest ${
                   value === 'readwrite' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                 }`}>
                   {key}: {value === 'readwrite' ? 'RW' : 'R'}
                 </span>
               ))}
-              {Object.keys(role.permissions).length > 4 && (
+              {Object.keys(role.permissions || {}).length > 4 && (
                 <span className="text-[9px] font-bold px-2 py-0.5 bg-gray-100 text-gray-400 rounded uppercase tracking-widest">
-                  +{Object.keys(role.permissions).length - 4} More
+                  +{Object.keys(role.permissions || {}).length - 4} More
                 </span>
               )}
             </div>
@@ -209,7 +209,7 @@ const UsersTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredUsers = useMemo(() => {
-    return USERS.filter(u => 
+    return (USERS || []).filter(u => 
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -250,8 +250,8 @@ const UsersTab = () => {
           </thead>
           <tbody className="divide-y divide-charcoal/5">
             {filteredUsers.map(user => {
-              const role = USER_ROLES.find(r => r.id === user.roleId);
-              const branch = BRANCHES.find(b => b.id === user.branchId);
+              const role = (USER_ROLES || []).find(r => r.id === user.roleId);
+              const branch = (BRANCHES || []).find(b => b.id === user.branchId);
               return (
                 <tr key={user.id} className="hover:bg-secondary-cream/30 transition-colors group">
                   <td className="px-8 py-6">
@@ -356,13 +356,13 @@ const UsersTab = () => {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-charcoal/40 uppercase tracking-widest ml-1">Role</label>
                     <select className="w-full p-4 bg-secondary-cream/50 border border-charcoal/5 rounded-2xl font-bold text-xs uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-honey/20">
-                      {USER_ROLES.map(role => <option key={role.id}>{role.roleName}</option>)}
+                      {(USER_ROLES || []).map(role => <option key={role.id}>{role.roleName}</option>)}
                     </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-charcoal/40 uppercase tracking-widest ml-1">Branch</label>
                     <select className="w-full p-4 bg-secondary-cream/50 border border-charcoal/5 rounded-2xl font-bold text-xs uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-honey/20">
-                      {BRANCHES.map(branch => <option key={branch.id}>{branch.name}</option>)}
+                      {(BRANCHES || []).map(branch => <option key={branch.id}>{branch.name}</option>)}
                     </select>
                   </div>
                 </div>

@@ -59,7 +59,7 @@ const NewTransferModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
   
   const availableBatches = useMemo(() => {
     if (!selectedIngredient || !selectedBranch) return [];
-    return INGREDIENT_BATCHES.filter(b => 
+    return (INGREDIENT_BATCHES || []).filter(b => 
       b.ingredientId === selectedIngredient && b.branchId === selectedBranch
     );
   }, [selectedIngredient, selectedBranch]);
@@ -89,14 +89,14 @@ const NewTransferModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
               onChange={(e) => setSelectedBranch(e.target.value)}
             >
               <option value="">Select Source...</option>
-              {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(BRANCHES || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">To Branch</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
               <option value="">Select Destination...</option>
-              {BRANCHES.map(b => b.id !== selectedBranch && <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(BRANCHES || []).map(b => b.id !== selectedBranch && <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -107,14 +107,14 @@ const NewTransferModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
               onChange={(e) => setSelectedIngredient(e.target.value)}
             >
               <option value="">Select Ingredient...</option>
-              {INGREDIENTS.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+              {(INGREDIENTS || []).map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Batch Number</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
               <option value="">Select Batch...</option>
-              {availableBatches.map(b => <option key={b.id} value={b.id}>{b.batchNumber} ({b.quantity} remaining)</option>)}
+              {(availableBatches || []).map(b => <option key={b.id} value={b.id}>{b.batchNumber} ({b.quantity} remaining)</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -182,6 +182,13 @@ export default function TransfersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const filteredTransfers = useMemo(() => {
+    return (BRANCH_TRANSFERS || []).filter(t => 
+      t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.status.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [searchTerm]);
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'pending': return 'amber';
@@ -244,12 +251,12 @@ export default function TransfersPage() {
               <th className="px-6 py-4 font-bold text-center">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
-            {BRANCH_TRANSFERS.map((tr) => {
-              const ingredient = INGREDIENTS.find(i => i.id === tr.ingredientId);
-              const batch = INGREDIENT_BATCHES.find(b => b.id === tr.batchId);
-              const fromBranch = BRANCHES.find(b => b.id === tr.fromBranchId);
-              const toBranch = BRANCHES.find(b => b.id === tr.toBranchId);
+            <tbody className="divide-y divide-gray-100">
+              {(filteredTransfers || []).map((tr) => {
+                const ingredient = (INGREDIENTS || []).find(i => i.id === tr.ingredientId);
+                const batch = (INGREDIENT_BATCHES || []).find(b => b.id === tr.batchId);
+                const fromBranch = (BRANCHES || []).find(b => b.id === tr.fromBranchId);
+                const toBranch = (BRANCHES || []).find(b => b.id === tr.toBranchId);
 
               return (
                 <tr key={tr.id} className="hover:bg-gray-50 transition-colors">

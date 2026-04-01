@@ -87,7 +87,7 @@ const CategoryRow = ({ category, ingredients, onEdit, onDelete }: any) => {
                 <div className="py-6 space-y-4">
                   <h4 className="text-[10px] font-black text-charcoal/40 uppercase tracking-widest ml-1">Ingredients in this category</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {ingredients.map((ing: any) => (
+                    {(ingredients || []).map((ing: any) => (
                       <div key={ing.id} className="bg-white p-4 rounded-xl border border-charcoal/5 shadow-sm flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-secondary-cream flex items-center justify-center text-charcoal/40">
                           <FlaskConical size={16} />
@@ -98,7 +98,7 @@ const CategoryRow = ({ category, ingredients, onEdit, onDelete }: any) => {
                         </div>
                       </div>
                     ))}
-                    {ingredients.length === 0 && (
+                    {(ingredients || []).length === 0 && (
                       <p className="text-xs text-charcoal/40 italic p-4">No ingredients linked to this category yet.</p>
                     )}
                   </div>
@@ -120,7 +120,7 @@ export default function IngredientCategories() {
   const [formData, setFormData] = useState({ name: '', description: '', isAllergenCategory: false });
 
   const filteredCategories = useMemo(() => {
-    return INGREDIENT_CATEGORIES.filter(cat => 
+    return (INGREDIENT_CATEGORIES || []).filter(cat => 
       cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cat.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -178,7 +178,7 @@ export default function IngredientCategories() {
               <CategoryRow 
                 key={cat.id} 
                 category={cat} 
-                ingredients={INGREDIENTS.filter(ing => ing.categoryId === cat.id)}
+                ingredients={(INGREDIENTS || []).filter(ing => ing.categoryId === cat.id)}
                 onEdit={() => {}}
                 onDelete={() => {}}
               />

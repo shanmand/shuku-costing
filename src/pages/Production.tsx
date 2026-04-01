@@ -61,7 +61,7 @@ const formatCurrency = (value: number) => {
 };
 
 const getEmployeeRate = (employeeId: string, date: string) => {
-  const history = EMPLOYEE_RATE_HISTORY
+  const history = (EMPLOYEE_RATE_HISTORY || [])
     .filter(h => h.employeeId === employeeId && new Date(h.effectiveDate) <= new Date(date))
     .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
   
@@ -69,11 +69,11 @@ const getEmployeeRate = (employeeId: string, date: string) => {
 };
 
 const getMaterialPrice = (ingredientId: string, date: string) => {
-  const history = MATERIAL_PRICE_HISTORY
+  const history = (MATERIAL_PRICE_HISTORY || [])
     .filter(h => h.ingredientId === ingredientId && new Date(h.effectiveDate) <= new Date(date))
     .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
   
-  const ingredient = INGREDIENTS.find(i => i.id === ingredientId);
+  const ingredient = (INGREDIENTS || []).find(i => i.id === ingredientId);
   return {
     price: history[0]?.unitCost || ingredient?.standardCost || 0,
     effectiveDate: history[0]?.effectiveDate || 'Standard',
@@ -90,16 +90,16 @@ const Production = () => {
   const [filters, setFilters] = useState({ branch: '', crew: '', stage: '', status: '' });
 
   const selectedBatch = useMemo(() => {
-    return PRODUCTION_BATCHES.find(b => b.id === selectedBatchId) || null;
+    return (PRODUCTION_BATCHES || []).find(b => b.id === selectedBatchId) || null;
   }, [selectedBatchId]);
 
   const linkedQCChecks = useMemo(() => {
     if (!selectedBatch) return [];
-    return QC_CHECKS.filter(qc => qc.productionBatchId === selectedBatch.id);
+    return (QC_CHECKS || []).filter(qc => qc.productionBatchId === selectedBatch.id);
   }, [selectedBatch]);
 
   const filteredBatches = useMemo(() => {
-    return PRODUCTION_BATCHES.filter(b => {
+    return (PRODUCTION_BATCHES || []).filter(b => {
       return (!filters.branch || b.branchId === filters.branch) &&
              (!filters.crew || b.crewId === filters.crew) &&
              (!filters.stage || b.currentStage === filters.stage) &&
@@ -139,7 +139,7 @@ const Production = () => {
               onChange={(e) => setFilters({ ...filters, branch: e.target.value })}
             >
               <option value="">All Branches</option>
-              {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(BRANCHES || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
             <select 
               className="bg-secondary-cream/50 border-none rounded-md px-3 py-1.5 text-xs font-medium outline-none"
@@ -147,7 +147,7 @@ const Production = () => {
               onChange={(e) => setFilters({ ...filters, crew: e.target.value })}
             >
               <option value="">All Crews</option>
-              {CREWS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {(CREWS || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <select 
               className="bg-secondary-cream/50 border-none rounded-md px-3 py-1.5 text-xs font-medium outline-none"
@@ -193,12 +193,12 @@ const Production = () => {
                     <td className="px-6 py-4 font-bold text-charcoal">{batch.id}</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="font-medium">{RECIPES.find(r => r.id === batch.recipeId)?.name}</span>
-                        <span className="text-[10px] text-charcoal/40">{CREWS.find(c => c.id === batch.crewId)?.name}</span>
+                        <span className="font-medium">{(RECIPES || []).find(r => r.id === batch.recipeId)?.name}</span>
+                        <span className="text-[10px] text-charcoal/40">{(CREWS || []).find(c => c.id === batch.crewId)?.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-charcoal/60">
-                      {BRANCHES.find(b => b.id === batch.branchId)?.name.split('(')[0]}
+                      {(BRANCHES || []).find(b => b.id === batch.branchId)?.name.split('(')[0]}
                     </td>
                     <td className="px-6 py-4 font-mono">{batch.plannedQty}</td>
                     <td className="px-6 py-4">
@@ -298,7 +298,7 @@ const Production = () => {
                       <Badge color={qc.result === 'Pass' ? 'green' : 'red'}>{qc.result}</Badge>
                     </div>
                     <p className="text-sm font-medium text-gray-700">{qc.notes}</p>
-                    <p className="text-xs text-gray-400 mt-2">{qc.checkDate} • {EMPLOYEES.find(e => e.id === qc.checkedBy)?.name}</p>
+                    <p className="text-xs text-gray-400 mt-2">{qc.checkDate} • {(EMPLOYEES || []).find(e => e.id === qc.checkedBy)?.name}</p>
                   </div>
                 )) : (
                   <p className="text-sm text-gray-400 italic">No QC checks recorded for this production batch.</p>
@@ -310,7 +310,7 @@ const Production = () => {
                 <div className="space-y-4">
                   <h4 className="text-[10px] uppercase font-bold text-charcoal/40 tracking-widest">Stage History</h4>
                   <div className="space-y-3">
-                    {selectedBatch.stageHistory.map((history, idx) => (
+                    {(selectedBatch.stageHistory || []).map((history, idx) => (
                       <div key={idx} className="flex gap-3 items-start">
                         <div className="mt-1 w-2 h-2 rounded-full bg-green-500 shrink-0" />
                         <div className="flex-1">
@@ -318,7 +318,7 @@ const Production = () => {
                             <span className="text-xs font-bold text-charcoal">{history.stage}</span>
                             <span className="text-[10px] text-charcoal/40">{new Date(history.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
-                          <p className="text-[10px] text-charcoal/60">Completed by {EMPLOYEES.find(e => e.id === history.user)?.name}</p>
+                          <p className="text-[10px] text-charcoal/60">Completed by {(EMPLOYEES || []).find(e => e.id === history.user)?.name}</p>
                         </div>
                       </div>
                     ))}
@@ -390,12 +390,12 @@ const StatusBadge = ({ status }: { status: string }) => {
 const AdvanceStageModal = ({ batch, onClose }: { batch: any, onClose: () => void }) => {
   const currentStageIdx = STAGES.findIndex(s => s.name === batch.currentStage);
   const nextStage = STAGES[currentStageIdx + 1] || STAGES[currentStageIdx];
-  const recipe = RECIPES.find(r => r.id === batch.recipeId);
-  const crew = CREWS.find(c => c.id === batch.crewId);
+  const recipe = (RECIPES || []).find(r => r.id === batch.recipeId);
+  const crew = (CREWS || []).find(c => c.id === batch.crewId);
   
   // Form State
   const [labour, setLabour] = useState<Record<string, { std: number, ot: number }>>(
-    crew?.members.reduce((acc, empId) => ({ ...acc, [empId]: { std: 8, ot: 0 } }), {}) || {}
+    (crew?.members || []).reduce((acc, empId) => ({ ...acc, [empId]: { std: 8, ot: 0 } }), {}) || {}
   );
   const [waste, setWaste] = useState({ qty: 0 });
   const [overhead, setOverhead] = useState(0);
@@ -406,7 +406,7 @@ const AdvanceStageModal = ({ batch, onClose }: { batch: any, onClose: () => void
   const labourCosts = useMemo(() => {
     return Object.keys(labour).map((empId) => {
       const hours = labour[empId];
-      const employee = EMPLOYEES.find(e => e.id === empId);
+      const employee = (EMPLOYEES || []).find(e => e.id === empId);
       const rates = getEmployeeRate(empId, new Date().toISOString());
       const cost = (hours.std * rates.standardRate) + (hours.ot * rates.overtimeRate);
       return { empId, name: employee?.name, cost, rates };
@@ -416,10 +416,10 @@ const AdvanceStageModal = ({ batch, onClose }: { batch: any, onClose: () => void
   const totalLabourCost = labourCosts.reduce((acc, curr) => acc + curr.cost, 0);
 
   const stageIngredients = useMemo(() => {
-    const recipeStage = recipe?.stages.find(s => s.name === batch.currentStage);
+    const recipeStage = (recipe?.stages || []).find(s => s.name === batch.currentStage);
     if (!recipeStage) return [];
     
-    return recipeStage.ingredients.map(ing => {
+    return (recipeStage.ingredients || []).map(ing => {
       const priceInfo = getMaterialPrice(ing.ingredientId, new Date().toISOString());
       const batchQty = ing.quantity * (batch.plannedQty / (recipe?.yieldUnits || 1));
       const cost = batchQty * priceInfo.price;
@@ -428,7 +428,7 @@ const AdvanceStageModal = ({ batch, onClose }: { batch: any, onClose: () => void
       
       return {
         ...ing,
-        name: INGREDIENTS.find(i => i.id === ing.ingredientId)?.name,
+        name: (INGREDIENTS || []).find(i => i.id === ing.ingredientId)?.name,
         batchQty,
         price: priceInfo.price,
         cost,
@@ -551,7 +551,7 @@ const AdvanceStageModal = ({ batch, onClose }: { batch: any, onClose: () => void
                       onChange={(e) => setPackagingSku(e.target.value)}
                     >
                       <option value="">Select SKU...</option>
-                      {SKUS.filter(s => s.recipeId === batch.recipeId).map(sku => (
+                      {(SKUS || []).filter(s => s.recipeId === batch.recipeId).map(sku => (
                         <option key={sku.id} value={sku.id}>{sku.name}</option>
                       ))}
                     </select>
@@ -684,21 +684,21 @@ const NewBatchModal = ({ onClose }: { onClose: () => void }) => {
             <label className="text-[10px] uppercase font-bold text-charcoal/60">Select Recipe</label>
             <select className="w-full px-4 py-2 rounded-lg border border-charcoal/10 outline-none bg-white text-sm">
               <option value="">Select Recipe...</option>
-              {RECIPES.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {(RECIPES || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] uppercase font-bold text-charcoal/60">Select Branch</label>
             <select className="w-full px-4 py-2 rounded-lg border border-charcoal/10 outline-none bg-white text-sm">
               <option value="">Select Branch...</option>
-              {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(BRANCHES || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] uppercase font-bold text-charcoal/60">Select Crew</label>
             <select className="w-full px-4 py-2 rounded-lg border border-charcoal/10 outline-none bg-white text-sm">
               <option value="">Select Crew...</option>
-              {CREWS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {(CREWS || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="space-y-2">

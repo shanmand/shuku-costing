@@ -64,7 +64,7 @@ export default function InventoryPlanning() {
 
   // 1. Calculate Requirements
   const requirements = useMemo(() => {
-    const activeBatches = PRODUCTION_BATCHES.filter(b => 
+    const activeBatches = (PRODUCTION_BATCHES || []).filter(b => 
       (b.status === 'Planned' || b.status === 'In Progress') &&
       (selectedBranch === 'all' || b.branchId === selectedBranch)
     );
@@ -72,13 +72,13 @@ export default function InventoryPlanning() {
     const reqMap: Record<string, IngredientRequirement> = {};
 
     activeBatches.forEach(batch => {
-      const recipe = RECIPES.find(r => r.id === batch.recipeId);
+      const recipe = (RECIPES || []).find(r => r.id === batch.recipeId);
       if (!recipe) return;
 
-      recipe.stages.forEach(stage => {
-        stage.ingredients.forEach(ing => {
+      (recipe.stages || []).forEach(stage => {
+        (stage.ingredients || []).forEach(ing => {
           if (!reqMap[ing.ingredientId]) {
-            const ingredient = INGREDIENTS.find(i => i.id === ing.ingredientId);
+            const ingredient = (INGREDIENTS || []).find(i => i.id === ing.ingredientId);
             reqMap[ing.ingredientId] = {
               ingredientId: ing.ingredientId,
               ingredientName: ingredient?.name || 'Unknown',
@@ -92,9 +92,9 @@ export default function InventoryPlanning() {
           }
           
           // Scale by planned qty (assuming recipe yield is 1 for simplicity in mock)
-          const scaledQty = ing.qty * batch.plannedQty;
+          const scaledQty = (ing.quantity || 0) * batch.plannedQty;
           reqMap[ing.ingredientId].requiredQty += scaledQty;
-          if (!reqMap[ing.ingredientId].batches.includes(batch.id)) {
+          if (!(reqMap[ing.ingredientId].batches || []).includes(batch.id)) {
             reqMap[ing.ingredientId].batches.push(batch.id);
           }
         });
@@ -103,7 +103,7 @@ export default function InventoryPlanning() {
 
     // 2. Add Available Stock
     Object.keys(reqMap).forEach(ingId => {
-      const stock = INGREDIENT_BATCHES
+      const stock = (INGREDIENT_BATCHES || [])
         .filter(ib => ib.ingredientId === ingId && (selectedBranch === 'all' || ib.branchId === selectedBranch))
         .reduce((sum, curr) => sum + curr.currentQty, 0);
       
@@ -178,7 +178,7 @@ export default function InventoryPlanning() {
             className="w-full pl-12 pr-4 py-4 bg-white border border-charcoal/5 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-honey/20 appearance-none font-bold text-xs uppercase tracking-widest"
           >
             <option value="all">All Branches</option>
-            {BRANCHES.map(b => (
+            {(BRANCHES || []).map(b => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
           </select>
@@ -194,7 +194,7 @@ export default function InventoryPlanning() {
         <div className="bg-white p-6 rounded-2xl border border-charcoal/5 shadow-sm">
           <p className="text-[10px] font-bold text-charcoal/40 uppercase tracking-widest mb-1">Active Batches Tracked</p>
           <h3 className="text-3xl font-black text-charcoal">
-            {PRODUCTION_BATCHES.filter(b => (b.status === 'Planned' || b.status === 'In Progress') && (selectedBranch === 'all' || b.branchId === selectedBranch)).length}
+            {(PRODUCTION_BATCHES || []).filter(b => (b.status === 'Planned' || b.status === 'In Progress') && (selectedBranch === 'all' || b.branchId === selectedBranch)).length}
           </h3>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-charcoal/5 shadow-sm">

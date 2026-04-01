@@ -59,14 +59,14 @@ const Dashboard = () => {
   // 1. KPI Calculations
   const stats = useMemo(() => {
     // Calculate Total Production Cost (Simplified for demo)
-    const totalCost = PRODUCTION_BATCHES.reduce((acc, batch) => {
-      const recipe = RECIPES.find(r => r.id === batch.recipeId);
+    const totalCost = (PRODUCTION_BATCHES || []).reduce((acc, batch) => {
+      const recipe = (RECIPES || []).find(r => r.id === batch.recipeId);
       if (!recipe) return acc;
       
       // Material cost estimation
-      const materialCost = recipe.stages.reduce((sAcc, stage) => {
-        return sAcc + stage.ingredients.reduce((iAcc, ing) => {
-          const ingredient = INGREDIENTS.find(i => i.id === ing.ingredientId);
+      const materialCost = (recipe.stages || []).reduce((sAcc, stage) => {
+        return sAcc + (stage.ingredients || []).reduce((iAcc, ing) => {
+          const ingredient = (INGREDIENTS || []).find(i => i.id === ing.ingredientId);
           return iAcc + (ing.quantity * (ingredient?.standardCost || 0));
         }, 0);
       }, 0);
@@ -77,9 +77,9 @@ const Dashboard = () => {
       return acc + (batchMaterialCost * 1.3);
     }, 0);
 
-    const activeBatches = PRODUCTION_BATCHES.filter(b => b.currentStage !== 'Distribution').length;
-    const wasteCost = QC_CHECKS.reduce((acc, qc) => acc + (qc.wasteCost || 0), 0);
-    const activeBranches = BRANCHES.filter(b => b.isActive).length;
+    const activeBatches = (PRODUCTION_BATCHES || []).filter(b => b.currentStage !== 'Distribution').length;
+    const wasteCost = (QC_CHECKS || []).reduce((acc, qc) => acc + (qc.wasteCost || 0), 0);
+    const activeBranches = (BRANCHES || []).filter(b => b.isActive).length;
 
     return { totalCost, activeBatches, wasteCost, activeBranches };
   }, []);
@@ -88,7 +88,7 @@ const Dashboard = () => {
   const pipelineData = useMemo(() => {
     return STAGES.map(stage => ({
       name: stage,
-      count: PRODUCTION_BATCHES.filter(b => b.currentStage === stage).length
+      count: (PRODUCTION_BATCHES || []).filter(b => b.currentStage === stage).length
     }));
   }, []);
 
@@ -103,30 +103,30 @@ const Dashboard = () => {
 
   // 4. Branch Comparison Data
   const branchData = useMemo(() => {
-    return BRANCHES.map(branch => ({
-      name: branch.name.split('(')[0].trim(),
-      batches: PRODUCTION_BATCHES.filter(b => b.branchId === branch.id).length,
+    return (BRANCHES || []).map(branch => ({
+      name: (branch.name || '').split('(')[0].trim(),
+      batches: (PRODUCTION_BATCHES || []).filter(b => b.branchId === branch.id).length,
     }));
   }, []);
 
   // 5. Recent Activity
   const recentActivity = useMemo(() => {
     const activities = [
-      ...PRODUCTION_BATCHES.flatMap(b => b.stageHistory.map(h => ({
+      ...(PRODUCTION_BATCHES || []).flatMap(b => (b.stageHistory || []).map(h => ({
         type: 'stage',
         title: `Batch ${b.id} moved to ${h.stage}`,
         time: h.completedAt,
         icon: Clock,
         color: 'text-amber-honey'
       }))),
-      ...QC_CHECKS.slice(0, 3).map(qc => ({
+      ...(QC_CHECKS || []).slice(0, 3).map(qc => ({
         type: 'qc',
         title: `QC ${qc.result}: ${qc.checkType}`,
         time: qc.checkDate,
         icon: qc.result === 'Pass' ? CheckCircle2 : XCircle,
         color: qc.result === 'Pass' ? 'text-green-600' : 'text-red-600'
       })),
-      ...BRANCH_TRANSFERS.slice(0, 2).map(tr => ({
+      ...(BRANCH_TRANSFERS || []).slice(0, 2).map(tr => ({
         type: 'transfer',
         title: `Transfer ${tr.status}: ${tr.quantity} units`,
         time: tr.transferDate,
@@ -139,7 +139,7 @@ const Dashboard = () => {
 
   // 6. Inventory Alerts
   const inventoryAlerts = useMemo(() => {
-    return INGREDIENTS.filter(ing => ing.currentStock < ing.reorderLevel);
+    return (INGREDIENTS || []).filter(ing => ing.currentStock < ing.reorderLevel);
   }, []);
 
   // 7. Compliance Audits
@@ -148,7 +148,7 @@ const Dashboard = () => {
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(today.getDate() + 30);
 
-    return COMPLIANCE_RECORDS.filter(rec => {
+    return (COMPLIANCE_RECORDS || []).filter(rec => {
       const auditDate = new Date(rec.nextAuditDate);
       return auditDate >= today && auditDate <= thirtyDaysFromNow;
     });
@@ -170,9 +170,9 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        <button className="text-xs font-bold text-amber-honey hover:underline uppercase tracking-widest">
+        <Link to="/sql-exports" className="text-xs font-bold text-amber-honey hover:underline uppercase tracking-widest">
           Database Settings
-        </button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -331,7 +331,7 @@ const Dashboard = () => {
               {upcomingAudits.map(audit => (
                 <div key={audit.id} className="bg-white p-4 rounded-lg border-l-4 border-amber-honey shadow-sm border border-charcoal/5">
                   <p className="text-sm font-bold text-charcoal">{audit.auditType}</p>
-                  <p className="text-xs text-charcoal/60 mt-1">{BRANCHES.find(b => b.id === audit.branchId)?.name}</p>
+                  <p className="text-xs text-charcoal/60 mt-1">{(BRANCHES || []).find(b => b.id === audit.branchId)?.name}</p>
                   <p className="text-xs font-bold text-amber-honey mt-2">Due: {new Date(audit.nextAuditDate).toLocaleDateString()}</p>
                 </div>
               ))}

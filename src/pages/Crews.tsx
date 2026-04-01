@@ -62,7 +62,7 @@ const Badge = ({ children, color = 'gray' }: { children: React.ReactNode, color?
 const CrewCard = ({ crew }: { crew: any, key?: any }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const branch = BRANCHES.find(b => b.id === crew.branchId);
-  const members = EMPLOYEES.filter(e => crew.members.includes(e.id));
+  const members = EMPLOYEES.filter(e => (crew.members || []).includes(e.id));
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
@@ -72,7 +72,7 @@ const CrewCard = ({ crew }: { crew: any, key?: any }) => {
             <Users size={24} />
           </div>
           <Badge color={crew.shiftType === 'morning' ? 'green' : crew.shiftType === 'evening' ? 'amber' : 'blue'}>
-            {crew.shiftType.toUpperCase()} SHIFT
+            {(crew.shiftType || '').toUpperCase()} SHIFT
           </Badge>
         </div>
         
@@ -89,7 +89,7 @@ const CrewCard = ({ crew }: { crew: any, key?: any }) => {
           </div>
           <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Members</p>
-            <p className="text-sm font-bold text-gray-800">{crew.members.length} Staff</p>
+            <p className="text-sm font-bold text-gray-800">{(crew.members || []).length} Staff</p>
           </div>
         </div>
 
@@ -111,11 +111,11 @@ const CrewCard = ({ crew }: { crew: any, key?: any }) => {
             className="border-t border-gray-100 bg-gray-50 overflow-hidden"
           >
             <div className="p-4 space-y-2">
-              {members.map(m => (
+              {(members || []).map(m => (
                 <div key={m.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 font-bold text-xs">
-                      {m.name.split(' ').map((n: string) => n[0]).join('')}
+                      {(m.name || '').split(' ').map((n: string) => n[0]).join('')}
                     </div>
                     <div>
                       <p className="text-sm font-bold text-gray-900">{m.name}</p>
@@ -138,7 +138,7 @@ const CrewCard = ({ crew }: { crew: any, key?: any }) => {
 
 const RateHistoryAccordion = ({ employee }: { employee: any, key?: any }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const history = EMPLOYEE_RATE_HISTORY
+  const history = (EMPLOYEE_RATE_HISTORY || [])
     .filter(h => h.employeeId === employee.id)
     .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
 
