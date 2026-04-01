@@ -22,6 +22,7 @@ import {
   UserCog, 
   Database 
 } from 'lucide-react';
+import { Toaster } from 'sonner';
 import { 
   BrowserRouter, 
   Routes, 
@@ -397,8 +398,6 @@ const PlaceholderPage = ({ name }: { name: string }) => (
     </p>
   </div>
 );
-
-import { Toaster } from 'sonner';
 
 // --- Main App ---
 
