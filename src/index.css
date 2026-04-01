@@ -1,0 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-charcoal: #1C1C1E;
+  --color-amber-honey: #F59E0B;
+  --color-warm-cream: #FEFCE8;
+  --color-secondary-cream: #FFF8E7;
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-warm-cream text-charcoal;
+  }
+}
