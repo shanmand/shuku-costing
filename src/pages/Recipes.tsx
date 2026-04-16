@@ -18,12 +18,7 @@ import {
   Save,
   X
 } from 'lucide-react';
-import { 
-  RECIPES, 
-  INGREDIENTS, 
-  BRANCHES, 
-  INGREDIENT_CATEGORIES
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 import { 
   Branch, 
   Ingredient, 
@@ -60,14 +55,24 @@ const Building2Icon = ({ size }: { size: number }) => (
   </svg>
 );
 
-const getIngredientCost = (ingredientId: string) => {
-  const ingredient = (INGREDIENTS || []).find(i => i.id === ingredientId);
+const getIngredientCost = (ingredientId: string, ingredients: any[]) => {
+  const ingredient = (ingredients || []).find(i => i.id === ingredientId);
   return ingredient?.standardCost || 0;
 };
 
 // --- Components ---
 
 const Recipes = () => {
+  const { 
+    recipes: RECIPES, 
+    ingredients: INGREDIENTS, 
+    branches: BRANCHES, 
+    packagingMaterials: PACKAGING_MATERIALS,
+    saveItem,
+    removeItem,
+    loading
+  } = useData();
+
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -143,7 +148,7 @@ const Recipes = () => {
     let materialTotal = 0;
     ensureArray<RecipeStage>(recipe.stages).forEach(stage => {
       ensureArray<any>(stage.ingredients).forEach(ing => {
-        materialTotal += ing.quantity * getIngredientCost(ing.ingredientId);
+        materialTotal += ing.quantity * getIngredientCost(ing.ingredientId, INGREDIENTS);
       });
     });
 
@@ -155,11 +160,19 @@ const Recipes = () => {
   };
 
   const handleAddPackagingItem = () => {
+    const firstPkg = PACKAGING_MATERIALS[0];
     setFormData(prev => ({
       ...prev,
       packagingItems: [
         ...prev.packagingItems,
-        { id: Math.random().toString(), name: 'New Packaging Item', quantity: 1, unit: 'pcs', cost: 0.5 }
+        { 
+          id: Math.random().toString(), 
+          packagingMaterialId: firstPkg.id,
+          name: firstPkg.name, 
+          quantity: 1, 
+          unit: firstPkg.unit, 
+          cost: firstPkg.cost 
+        }
       ]
     }));
   };
@@ -186,6 +199,49 @@ const Recipes = () => {
       ...prev,
       bomLines: prev.bomLines.filter(line => line.id !== id)
     }));
+  };
+
+  const handleSave = async () => {
+    if (!formData.name || !formData.code) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Transform bomLines into stages
+    const stagesMap = new Map<string, any[]>();
+    formData.bomLines.forEach(line => {
+      if (!stagesMap.has(line.stage)) {
+        stagesMap.set(line.stage, []);
+      }
+      stagesMap.get(line.stage)?.push({
+        ingredientId: line.ingredientId,
+        quantity: line.quantity,
+        unit: line.unit
+      });
+    });
+
+    const stages = Array.from(stagesMap.entries()).map(([name, ingredients]) => ({
+      name,
+      ingredients
+    }));
+
+    const recipeData = {
+      ...formData,
+      stages,
+      id: selectedRecipeId || undefined
+    };
+
+    // Remove temporary fields used in form
+    delete (recipeData as any).bomLines;
+
+    try {
+      await saveItem('recipes', recipeData);
+      toast.success(selectedRecipeId ? 'Recipe updated successfully' : 'Recipe created successfully');
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+      toast.error('Failed to save recipe');
+    }
   };
 
   return (
@@ -536,16 +592,15 @@ const Recipes = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold text-charcoal/60">Code <span className="text-red-500">*</span></label>
-                    <select 
+                    <label className="text-[10px] uppercase font-bold text-charcoal/60">SKU Code <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
                       required
                       value={formData.code}
                       onChange={(e) => setFormData({...formData, code: e.target.value})}
-                      className="w-full px-4 py-2 rounded-lg border border-charcoal/10 focus:ring-2 focus:ring-amber-honey/50 outline-none bg-white"
-                    >
-                      <option value="">Select Code/Type</option>
-                      {RECIPE_CATEGORIES.map(cat => <option key={cat} value={cat.toLowerCase()}>{cat}</option>)}
-                    </select>
+                      placeholder="e.g. SKU-12345" 
+                      className="w-full px-4 py-2 rounded-lg border border-charcoal/10 focus:ring-2 focus:ring-amber-honey/50 outline-none" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] uppercase font-bold text-charcoal/60">Category</label>
@@ -773,16 +828,30 @@ const Recipes = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {ensureArray<any>(formData.packagingItems).map((item) => (
                     <div key={item.id} className="bg-white p-4 rounded-lg border border-charcoal/5 shadow-sm flex items-center justify-between">
-                      <div className="flex-1 mr-4">
-                        <input 
-                          type="text" 
-                          value={item.name}
+                      <div className="flex-1 mr-4 space-y-2">
+                        <select 
+                          value={item.packagingMaterialId}
                           onChange={(e) => {
-                            const newItems = ensureArray<any>(formData.packagingItems).map(i => i.id === item.id ? {...i, name: e.target.value} : i);
-                            setFormData({...formData, packagingItems: newItems});
+                            const selectedPkg = PACKAGING_MATERIALS.find(p => p.id === e.target.value);
+                            if (selectedPkg) {
+                              const newItems = ensureArray<any>(formData.packagingItems).map(i => 
+                                i.id === item.id ? {
+                                  ...i, 
+                                  packagingMaterialId: selectedPkg.id,
+                                  name: selectedPkg.name,
+                                  unit: selectedPkg.unit,
+                                  cost: selectedPkg.cost
+                                } : i
+                              );
+                              setFormData({...formData, packagingItems: newItems});
+                            }
                           }}
-                          className="text-sm font-bold bg-transparent border-b border-transparent focus:border-amber-honey outline-none w-full"
-                        />
+                          className="text-sm font-bold bg-transparent border-b border-charcoal/10 focus:border-amber-honey outline-none w-full"
+                        >
+                          {PACKAGING_MATERIALS.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
                         <div className="flex items-center gap-2 mt-1">
                           <input 
                             type="number" 
@@ -791,9 +860,9 @@ const Recipes = () => {
                               const newItems = ensureArray<any>(formData.packagingItems).map(i => i.id === item.id ? {...i, quantity: Number(e.target.value)} : i);
                               setFormData({...formData, packagingItems: newItems});
                             }}
-                            className="text-xs text-charcoal/40 bg-transparent border-b border-transparent focus:border-amber-honey outline-none w-12"
+                            className="text-xs text-charcoal/40 bg-transparent border-b border-charcoal/10 focus:border-amber-honey outline-none w-12"
                           />
-                          <span className="text-xs text-charcoal/40">units @ R{(item.cost || 0.5).toFixed(2)}</span>
+                          <span className="text-xs text-charcoal/40">{item.unit} @ R{(item.cost || 0).toFixed(2)}</span>
                         </div>
                       </div>
                       <button 
@@ -826,10 +895,7 @@ const Recipes = () => {
                   Cancel
                 </button>
                 <button 
-                  onClick={() => {
-                    toast.success('Recipe saved successfully (Mock)');
-                    setIsFormOpen(false);
-                  }}
+                  onClick={handleSave}
                   className="bg-charcoal text-warm-cream px-8 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-black transition-all shadow-lg"
                 >
                   <Save size={20} />

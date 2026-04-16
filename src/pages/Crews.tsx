@@ -24,13 +24,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import { 
-  CREWS, 
-  EMPLOYEES, 
-  EMPLOYEE_RATE_HISTORY, 
-  BRANCHES,
-  RATE_CHANGE_REASONS
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 // --- Helpers ---
 
@@ -59,10 +53,10 @@ const Badge = ({ children, color = 'gray' }: { children: React.ReactNode, color?
   );
 };
 
-const CrewCard = ({ crew }: { crew: any, key?: any }) => {
+const CrewCard = ({ crew, branches, employees }: { crew: any, branches: any[], employees: any[], key?: any }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const branch = BRANCHES.find(b => b.id === crew.branchId);
-  const members = EMPLOYEES.filter(e => (crew.members || []).includes(e.id));
+  const branch = branches.find(b => b.id === crew.branchId);
+  const members = employees.filter(e => (crew.members || []).includes(e.id));
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
@@ -136,9 +130,9 @@ const CrewCard = ({ crew }: { crew: any, key?: any }) => {
   );
 };
 
-const RateHistoryAccordion = ({ employee }: { employee: any, key?: any }) => {
+const RateHistoryAccordion = ({ employee, rateHistory }: { employee: any, rateHistory: any[], key?: any }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const history = (EMPLOYEE_RATE_HISTORY || [])
+  const history = (rateHistory || [])
     .filter(h => h.employeeId === employee.id)
     .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
 
@@ -221,7 +215,7 @@ const RateHistoryAccordion = ({ employee }: { employee: any, key?: any }) => {
   );
 };
 
-const UpdateRateModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+const UpdateRateModal = ({ isOpen, onClose, employees, rateChangeReasons }: { isOpen: boolean, onClose: () => void, employees: any[], rateChangeReasons: any[] }) => {
   if (!isOpen) return null;
 
   return (
@@ -242,7 +236,7 @@ const UpdateRateModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => 
           <div className="space-y-1 col-span-2">
             <label className="text-xs font-bold text-gray-500 uppercase">Employee</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
-              {EMPLOYEES.map(e => <option key={e.id} value={e.id}>{e.name} ({e.employeeCode})</option>)}
+              {employees.map(e => <option key={e.id} value={e.id}>{e.name} ({e.employeeCode})</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -253,7 +247,7 @@ const UpdateRateModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => 
             <label className="text-xs font-bold text-gray-500 uppercase">Change Reason</label>
             <div className="space-y-2">
               <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
-                {RATE_CHANGE_REASONS.map(r => <option key={r.id} value={r.label}>{r.label}</option>)}
+                {rateChangeReasons.map(r => <option key={r.id} value={r.label}>{r.label}</option>)}
               </select>
               <button className="text-[10px] font-bold text-amber-600 hover:underline">+ Add custom reason</button>
             </div>
@@ -292,7 +286,25 @@ const UpdateRateModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => 
 // --- Main Page ---
 
 export default function CrewsPage() {
+  const { 
+    crews: CREWS, 
+    employees: EMPLOYEES, 
+    branches: BRANCHES, 
+    employeeRateHistory: EMPLOYEE_RATE_HISTORY,
+    rateChangeReasons: RATE_CHANGE_REASONS,
+    loading,
+    saveItem
+  } = useData();
+
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -330,7 +342,7 @@ export default function CrewsPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {CREWS.map(crew => (
-            <CrewCard key={crew.id} crew={crew} />
+            <CrewCard key={crew.id} crew={crew} branches={BRANCHES} employees={EMPLOYEES} />
           ))}
         </div>
       </section>
@@ -407,12 +419,17 @@ export default function CrewsPage() {
         </div>
         <div className="space-y-4">
           {EMPLOYEES.map(emp => (
-            <RateHistoryAccordion key={emp.id} employee={emp} />
+            <RateHistoryAccordion key={emp.id} employee={emp} rateHistory={EMPLOYEE_RATE_HISTORY} />
           ))}
         </div>
       </section>
 
-      <UpdateRateModal isOpen={isUpdateModalOpen} onClose={() => setIsUpdateModalOpen(false)} />
+      <UpdateRateModal 
+        isOpen={isUpdateModalOpen} 
+        onClose={() => setIsUpdateModalOpen(false)} 
+        employees={EMPLOYEES}
+        rateChangeReasons={RATE_CHANGE_REASONS}
+      />
     </div>
   );
 }

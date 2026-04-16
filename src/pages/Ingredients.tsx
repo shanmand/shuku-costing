@@ -33,17 +33,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { 
-  INGREDIENTS, 
-  INGREDIENT_CATEGORIES, 
-  SUPPLIERS, 
-  INGREDIENT_BATCHES, 
-  MATERIAL_PRICE_HISTORY,
-  BRANCHES,
-  PRODUCTION_BATCHES,
-  QC_CHECKS,
-  EMPLOYEES
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 import { toast } from 'sonner';
 
@@ -72,8 +62,8 @@ const Badge = ({ children, color = 'gray' }: { children: React.ReactNode, color?
   );
 };
 
-const PriceHistoryChart = ({ ingredientId }: { ingredientId: string }) => {
-  const history = (MATERIAL_PRICE_HISTORY || [])
+const PriceHistoryChart = ({ ingredientId, materialPriceHistory }: { ingredientId: string, materialPriceHistory: any[] }) => {
+  const history = (materialPriceHistory || [])
     .filter(h => h.ingredientId === ingredientId)
     .sort((a, b) => new Date(a.effectiveDate).getTime() - new Date(b.effectiveDate).getTime());
 
@@ -114,10 +104,10 @@ const PriceHistoryChart = ({ ingredientId }: { ingredientId: string }) => {
   );
 };
 
-const IngredientRow = ({ ingredient }: { ingredient: any, key?: any }) => {
+const IngredientRow = ({ ingredient, categories, suppliers, materialPriceHistory }: { ingredient: any, categories: any[], suppliers: any[], materialPriceHistory: any[], key?: any }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const category = (INGREDIENT_CATEGORIES || []).find(c => c.id === ingredient.categoryId);
-  const supplier = (SUPPLIERS || []).find(s => s.id === ingredient.supplierId);
+  const category = (categories || []).find(c => c.id === ingredient.categoryId);
+  const supplier = (suppliers || []).find(s => s.id === ingredient.supplierId);
   
   const stockRatio = ingredient.currentStock / ingredient.reorderLevel;
   const stockStatus = stockRatio > 1.5 ? 'green' : stockRatio >= 1 ? 'amber' : 'red';
@@ -183,7 +173,7 @@ const IngredientRow = ({ ingredient }: { ingredient: any, key?: any }) => {
                   <TrendingUp size={16} className="text-amber-600" />
                   Price History
                 </h4>
-                <PriceHistoryChart ingredientId={ingredient.id} />
+                <PriceHistoryChart ingredientId={ingredient.id} materialPriceHistory={materialPriceHistory} />
               </div>
               <div className="space-y-4">
                 <h4 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
@@ -215,11 +205,11 @@ const IngredientRow = ({ ingredient }: { ingredient: any, key?: any }) => {
   );
 };
 
-const BatchRow = ({ batch }: { batch: any, key?: any }) => {
+const BatchRow = ({ batch, ingredients, suppliers, branches, productionBatches, qcChecks, employees }: { batch: any, ingredients: any[], suppliers: any[], branches: any[], productionBatches: any[], qcChecks: any[], employees: any[], key?: any }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const ingredient = (INGREDIENTS || []).find(i => i.id === batch.ingredientId);
-  const supplier = (SUPPLIERS || []).find(s => s.id === batch.supplierId);
-  const branch = (BRANCHES || []).find(b => b.id === batch.branchId);
+  const ingredient = (ingredients || []).find(i => i.id === batch.ingredientId);
+  const supplier = (suppliers || []).find(s => s.id === batch.supplierId);
+  const branch = (branches || []).find(b => b.id === batch.branchId);
   
   const expiryDate = new Date(batch.expiryDate);
   const today = new Date();
@@ -227,11 +217,11 @@ const BatchRow = ({ batch }: { batch: any, key?: any }) => {
   
   const expiryStatus = daysToExpiry < 0 ? 'red' : daysToExpiry <= 30 ? 'amber' : 'green';
 
-  const usedInBatches = (PRODUCTION_BATCHES || []).filter(pb => 
+  const usedInBatches = (productionBatches || []).filter(pb => 
     (pb.stageHistory || []).some(sh => sh.user === 'emp-01') // Mocking traceability for demo
   ).slice(0, 3);
 
-  const linkedQCChecks = (QC_CHECKS || []).filter(qc => qc.ingredientBatchId === batch.id);
+  const linkedQCChecks = (qcChecks || []).filter(qc => qc.ingredientBatchId === batch.id);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow mb-3">
@@ -358,7 +348,7 @@ const BatchRow = ({ batch }: { batch: any, key?: any }) => {
                         <Badge color={qc.result === 'Pass' ? 'green' : 'red'}>{qc.result}</Badge>
                       </div>
                       <p className="text-xs font-medium text-gray-700">{qc.notes}</p>
-                      <p className="text-[10px] text-gray-400 mt-2">{qc.checkDate} • {EMPLOYEES.find(e => e.id === qc.checkedBy)?.name}</p>
+                      <p className="text-[10px] text-gray-400 mt-2">{qc.checkDate} • {employees.find(e => e.id === qc.checkedBy)?.name}</p>
                     </div>
                   )) : (
                     <p className="text-xs text-gray-400 italic">No QC checks recorded for this batch.</p>
@@ -373,7 +363,7 @@ const BatchRow = ({ batch }: { batch: any, key?: any }) => {
   );
 };
 
-const ReceiveBatchModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+const ReceiveBatchModal = ({ isOpen, onClose, ingredients, suppliers, branches }: { isOpen: boolean, onClose: () => void, ingredients: any[], suppliers: any[], branches: any[] }) => {
   if (!isOpen) return null;
 
   return (
@@ -394,7 +384,7 @@ const ReceiveBatchModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase">Ingredient</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-              {(INGREDIENTS || []).map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+              {(ingredients || []).map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -404,13 +394,13 @@ const ReceiveBatchModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase">Supplier</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-              {SUPPLIERS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {(suppliers || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase">Branch</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-              {(BRANCHES || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(branches || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -451,6 +441,20 @@ const ReceiveBatchModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =
 // --- Main Page ---
 
 export default function IngredientsPage() {
+  const { 
+    ingredients: INGREDIENTS, 
+    categories: INGREDIENT_CATEGORIES, 
+    suppliers: SUPPLIERS, 
+    ingredientBatches: INGREDIENT_BATCHES,
+    branches: BRANCHES,
+    productionBatches: PRODUCTION_BATCHES,
+    qcChecks: QC_CHECKS,
+    employees: EMPLOYEES,
+    materialPriceHistory: MATERIAL_PRICE_HISTORY,
+    loading,
+    saveItem
+  } = useData();
+
   const [activeTab, setActiveTab] = useState<'master' | 'tracking'>('master');
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -466,6 +470,14 @@ export default function IngredientsPage() {
              ingredient?.name.toLowerCase().includes(searchTerm.toLowerCase());
     });
   }, [searchTerm]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -535,13 +547,28 @@ export default function IngredientsPage() {
 
       {/* Content */}
       <div className="space-y-4">
-        {activeTab === 'master' ? (
+          {activeTab === 'master' ? (
           filteredIngredients.map(ing => (
-            <IngredientRow key={ing.id} ingredient={ing} />
+            <IngredientRow 
+              key={ing.id} 
+              ingredient={ing} 
+              categories={INGREDIENT_CATEGORIES} 
+              suppliers={SUPPLIERS} 
+              materialPriceHistory={MATERIAL_PRICE_HISTORY} 
+            />
           ))
         ) : (
           filteredBatches.map(batch => (
-            <BatchRow key={batch.id} batch={batch} />
+            <BatchRow 
+              key={batch.id} 
+              batch={batch} 
+              ingredients={INGREDIENTS} 
+              suppliers={SUPPLIERS} 
+              branches={BRANCHES} 
+              productionBatches={PRODUCTION_BATCHES} 
+              qcChecks={QC_CHECKS} 
+              employees={EMPLOYEES} 
+            />
           ))
         )}
         
@@ -554,13 +581,24 @@ export default function IngredientsPage() {
         )}
       </div>
 
-      <ReceiveBatchModal isOpen={isModalOpen && activeTab === 'tracking'} onClose={() => setIsModalOpen(false)} />
-      <AddIngredientModal isOpen={isModalOpen && activeTab === 'master'} onClose={() => setIsModalOpen(false)} />
+      <ReceiveBatchModal 
+        isOpen={isModalOpen && activeTab === 'tracking'} 
+        onClose={() => setIsModalOpen(false)} 
+        ingredients={INGREDIENTS}
+        suppliers={SUPPLIERS}
+        branches={BRANCHES}
+      />
+      <AddIngredientModal 
+        isOpen={isModalOpen && activeTab === 'master'} 
+        onClose={() => setIsModalOpen(false)} 
+        categories={INGREDIENT_CATEGORIES}
+        suppliers={SUPPLIERS}
+      />
     </div>
   );
 }
 
-const AddIngredientModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+const AddIngredientModal = ({ isOpen, onClose, categories, suppliers }: { isOpen: boolean, onClose: () => void, categories: any[], suppliers: any[] }) => {
   if (!isOpen) return null;
 
   return (
@@ -585,7 +623,7 @@ const AddIngredientModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase">Category</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none bg-white">
-              {(INGREDIENT_CATEGORIES || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {(categories || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -608,7 +646,7 @@ const AddIngredientModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase">Supplier</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none bg-white">
-              {SUPPLIERS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {(suppliers || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div className="col-span-2 flex items-center gap-2">

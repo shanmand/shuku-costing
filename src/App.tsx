@@ -31,7 +31,9 @@ import {
   Outlet, 
   useLocation 
 } from 'react-router-dom';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { supabase } from './lib/supabase';
+import { Login } from './components/Login';
 import Dashboard from './pages/Dashboard';
 import Recipes from './pages/Recipes';
 import Production from './pages/Production';
@@ -399,36 +401,79 @@ const PlaceholderPage = ({ name }: { name: string }) => (
   </div>
 );
 
+import { DataProvider } from './contexts/DataContext';
+
 // --- Main App ---
 
 export default function App() {
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary-cream">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+          <p className="text-charcoal/40 text-[10px] font-black uppercase tracking-widest">Initializing System...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isSupabaseConfigured = 
+    import.meta.env.VITE_SUPABASE_URL && 
+    import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co' &&
+    import.meta.env.VITE_SUPABASE_ANON_KEY &&
+    import.meta.env.VITE_SUPABASE_ANON_KEY !== 'placeholder';
+
+  if (isSupabaseConfigured && !session) {
+    return <Login />;
+  }
+
   return (
-    <BrowserRouter>
-      <Toaster position="top-right" richColors />
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="recipes" element={<Recipes />} />
-          <Route path="skus" element={<SKUs />} />
-          <Route path="ingredients" element={<Ingredients />} />
-          <Route path="production" element={<Production />} />
-          <Route path="crews" element={<Crews />} />
-          <Route path="branches" element={<Branches />} />
-          <Route path="transfers" element={<Transfers />} />
-          <Route path="journals" element={<JournalEntries />} />
-          <Route path="compliance" element={<Compliance />} />
-          <Route path="analytics" element={<Analytics />} />
-          <Route path="inventory-planning" element={<InventoryPlanning />} />
-          <Route path="quality-control" element={<QualityControl />} />
-          <Route path="suppliers" element={<Suppliers />} />
-          <Route path="ingredient-categories" element={<IngredientCategories />} />
-          <Route path="user-access" element={<UserAccess />} />
-          <Route path="sql-exports" element={<SqlExports />} />
-          
-          {/* Fallback */}
-          <Route path="*" element={<PlaceholderPage name="404 - Not Found" />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <DataProvider>
+      <BrowserRouter>
+        <Toaster position="top-right" richColors />
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="recipes" element={<Recipes />} />
+            <Route path="skus" element={<SKUs />} />
+            <Route path="ingredients" element={<Ingredients />} />
+            <Route path="production" element={<Production />} />
+            <Route path="crews" element={<Crews />} />
+            <Route path="branches" element={<Branches />} />
+            <Route path="transfers" element={<Transfers />} />
+            <Route path="journals" element={<JournalEntries />} />
+            <Route path="compliance" element={<Compliance />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="inventory-planning" element={<InventoryPlanning />} />
+            <Route path="quality-control" element={<QualityControl />} />
+            <Route path="suppliers" element={<Suppliers />} />
+            <Route path="ingredient-categories" element={<IngredientCategories />} />
+            <Route path="user-access" element={<UserAccess />} />
+            <Route path="sql-exports" element={<SqlExports />} />
+            
+            {/* Fallback */}
+            <Route path="*" element={<PlaceholderPage name="404 - Not Found" />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </DataProvider>
   );
 }

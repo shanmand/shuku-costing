@@ -18,7 +18,8 @@ import {
   MoreVertical
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { USERS, USER_ROLES, BRANCHES } from '../data/entities';
+import { useData } from '../contexts/DataContext';
+import { toast } from 'sonner';
 
 // --- Constants ---
 
@@ -81,13 +82,42 @@ const PermissionsMatrix = ({ role, onUpdate }: any) => {
   );
 };
 
-const RolesTab = () => {
+const RolesTab = ({ roles, users, saveItem }: { roles: any[], users: any[], saveItem: any }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<any>(null);
 
   const handleRoleClick = (role: any) => {
-    setSelectedRole(role);
+    setSelectedRole({ ...role });
     setIsModalOpen(true);
+  };
+
+  const handleUpdatePermission = (moduleKey: string, level: string) => {
+    if (!selectedRole) return;
+    
+    setSelectedRole({
+      ...selectedRole,
+      permissions: {
+        ...(selectedRole.permissions || {}),
+        [moduleKey]: level
+      }
+    });
+  };
+
+  const handleSaveRole = async () => {
+    if (!selectedRole) return;
+    
+    try {
+      if (!selectedRole.roleName) {
+        toast.error('Please select a role name');
+        return;
+      }
+      await saveItem('roles', selectedRole);
+      toast.success('Role saved successfully');
+      setIsModalOpen(false);
+    } catch (error: any) {
+      console.error('Error saving role:', error);
+      toast.error(error.message || 'Failed to save role');
+    }
   };
 
   return (
@@ -95,7 +125,7 @@ const RolesTab = () => {
       <div className="flex justify-between items-center">
         <h3 className="text-sm font-black text-charcoal uppercase tracking-widest">System Roles & Permissions</h3>
         <button 
-          onClick={() => { setSelectedRole(null); setIsModalOpen(true); }}
+          onClick={() => { setSelectedRole({ roleName: '', permissions: {} }); setIsModalOpen(true); }}
           className="bg-charcoal text-warm-cream px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-charcoal/90 transition-all shadow-lg active:scale-95"
         >
           <Plus size={20} className="text-amber-honey" />
@@ -104,7 +134,7 @@ const RolesTab = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {(USER_ROLES || []).map(role => (
+        {roles.map(role => (
           <div 
             key={role.id} 
             onClick={() => handleRoleClick(role)}
@@ -115,7 +145,7 @@ const RolesTab = () => {
                 <ShieldCheck size={20} />
               </div>
               <span className="text-[10px] font-bold text-charcoal/30 bg-secondary-cream px-2 py-1 rounded uppercase tracking-widest">
-                {(USERS || []).filter(u => u.roleId === role.id).length} Users
+                {(users || []).filter(u => u.roleId === role.id).length} Users
               </span>
             </div>
             <h4 className="text-lg font-black text-charcoal mb-2">{role.roleName}</h4>
@@ -173,25 +203,34 @@ const RolesTab = () => {
               <div className="p-8 overflow-y-auto flex-1 custom-scrollbar space-y-8">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-charcoal/40 uppercase tracking-widest ml-1">Role Name</label>
-                  <input 
-                    type="text"
-                    className="w-full p-4 bg-secondary-cream/50 border border-charcoal/5 rounded-2xl font-bold text-sm focus:outline-none focus:ring-2 focus:ring-amber-honey/20"
-                    placeholder="e.g. Production Supervisor"
-                    defaultValue={selectedRole?.roleName}
-                  />
+                    <select 
+                      className="w-full p-4 bg-secondary-cream/50 border border-charcoal/5 rounded-2xl font-bold text-xs uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-honey/20"
+                      value={selectedRole?.roleName || ''}
+                      onChange={(e) => setSelectedRole({ ...selectedRole, roleName: e.target.value })}
+                    >
+                      <option value="">Select Role Name</option>
+                      <option value="Admin">Admin</option>
+                      <option value="Manager">Manager</option>
+                      <option value="Supervisor">Supervisor</option>
+                      <option value="Operator">Operator</option>
+                      <option value="Viewer">Viewer</option>
+                    </select>
                 </div>
 
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-black text-charcoal/40 uppercase tracking-widest ml-1">Permissions Matrix</h4>
                   <PermissionsMatrix 
                     role={selectedRole || { permissions: {} }} 
-                    onUpdate={() => {}} 
+                    onUpdate={handleUpdatePermission} 
                   />
                 </div>
               </div>
 
               <div className="p-6 bg-secondary-cream border-t border-charcoal/5 flex gap-3">
-                <button className="flex-1 py-4 bg-charcoal text-amber-honey rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-charcoal/90 transition-all flex items-center justify-center gap-2">
+                <button 
+                  onClick={handleSaveRole}
+                  className="flex-1 py-4 bg-charcoal text-amber-honey rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-charcoal/90 transition-all flex items-center justify-center gap-2"
+                >
                   <CheckCircle2 size={20} />
                   Save Role Configuration
                 </button>
@@ -204,16 +243,33 @@ const RolesTab = () => {
   );
 };
 
-const UsersTab = () => {
+const UsersTab = ({ users, roles, branches, saveItem }: { users: any[], roles: any[], branches: any[], saveItem: any }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [formData, setFormData] = useState({ name: '', email: '', roleId: '', branchId: '', isActive: true });
 
   const filteredUsers = useMemo(() => {
-    return (USERS || []).filter(u => 
+    return (users || []).filter(u => 
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm]);
+  }, [users, searchTerm]);
+
+  const handleSaveUser = async () => {
+    try {
+      if (!formData.name || !formData.email || !formData.roleId || !formData.branchId) {
+        toast.error('Please fill in all required fields');
+        return;
+      }
+      await saveItem('users', formData);
+      toast.success('User account created successfully');
+      setIsModalOpen(false);
+      setFormData({ name: '', email: '', roleId: '', branchId: '', isActive: true });
+    } catch (error: any) {
+      console.error('Error saving user:', error);
+      toast.error(error.message || 'Failed to create user account');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -250,8 +306,8 @@ const UsersTab = () => {
           </thead>
           <tbody className="divide-y divide-charcoal/5">
             {filteredUsers.map(user => {
-              const role = (USER_ROLES || []).find(r => r.id === user.roleId);
-              const branch = (BRANCHES || []).find(b => b.id === user.branchId);
+              const role = (roles || []).find(r => r.id === user.roleId);
+              const branch = (branches || []).find(b => b.id === user.branchId);
               return (
                 <tr key={user.id} className="hover:bg-secondary-cream/30 transition-colors group">
                   <td className="px-8 py-6">
@@ -340,6 +396,8 @@ const UsersTab = () => {
                     type="text"
                     className="w-full p-4 bg-secondary-cream/50 border border-charcoal/5 rounded-2xl font-bold text-sm focus:outline-none focus:ring-2 focus:ring-amber-honey/20"
                     placeholder="e.g. Lindiwe Dlamini"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   />
                 </div>
 
@@ -349,25 +407,40 @@ const UsersTab = () => {
                     type="email"
                     className="w-full p-4 bg-secondary-cream/50 border border-charcoal/5 rounded-2xl font-bold text-sm focus:outline-none focus:ring-2 focus:ring-amber-honey/20"
                     placeholder="lindiwe@shuku.co.za"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-charcoal/40 uppercase tracking-widest ml-1">Role</label>
-                    <select className="w-full p-4 bg-secondary-cream/50 border border-charcoal/5 rounded-2xl font-bold text-xs uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-honey/20">
-                      {(USER_ROLES || []).map(role => <option key={role.id}>{role.roleName}</option>)}
+                    <select 
+                      className="w-full p-4 bg-secondary-cream/50 border border-charcoal/5 rounded-2xl font-bold text-xs uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-honey/20"
+                      value={formData.roleId}
+                      onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
+                    >
+                      <option value="">Select Role</option>
+                      {(roles || []).map(role => <option key={role.id} value={role.id}>{role.roleName}</option>)}
                     </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-charcoal/40 uppercase tracking-widest ml-1">Branch</label>
-                    <select className="w-full p-4 bg-secondary-cream/50 border border-charcoal/5 rounded-2xl font-bold text-xs uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-honey/20">
-                      {(BRANCHES || []).map(branch => <option key={branch.id}>{branch.name}</option>)}
+                    <select 
+                      className="w-full p-4 bg-secondary-cream/50 border border-charcoal/5 rounded-2xl font-bold text-xs uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-honey/20"
+                      value={formData.branchId}
+                      onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+                    >
+                      <option value="">Select Branch</option>
+                      {(branches || []).map(branch => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
                     </select>
                   </div>
                 </div>
 
-                <button className="w-full py-4 bg-charcoal text-amber-honey rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-charcoal/90 transition-all flex items-center justify-center gap-2">
+                <button 
+                  onClick={handleSaveUser}
+                  className="w-full py-4 bg-charcoal text-amber-honey rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-charcoal/90 transition-all flex items-center justify-center gap-2"
+                >
                   <CheckCircle2 size={20} />
                   Create User Account
                 </button>
@@ -383,7 +456,23 @@ const UsersTab = () => {
 // --- Main Page ---
 
 export default function UserAccess() {
+  const { 
+    users: USERS, 
+    roles: USER_ROLES, 
+    branches: BRANCHES, 
+    loading,
+    saveItem
+  } = useData();
+
   const [activeTab, setActiveTab] = useState<'roles' | 'users'>('roles');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -424,7 +513,9 @@ export default function UserAccess() {
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
         >
-          {activeTab === 'roles' ? <RolesTab /> : <UsersTab />}
+          {activeTab === 'roles' 
+            ? <RolesTab roles={USER_ROLES} users={USERS} saveItem={saveItem} /> 
+            : <UsersTab users={USERS} roles={USER_ROLES} branches={BRANCHES} saveItem={saveItem} />}
         </motion.div>
       </AnimatePresence>
     </div>

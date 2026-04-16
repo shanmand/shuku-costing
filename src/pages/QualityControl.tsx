@@ -33,12 +33,7 @@ import {
   Tooltip, 
   Legend 
 } from 'recharts';
-import { 
-  QC_CHECKS, 
-  PRODUCTION_BATCHES, 
-  INGREDIENT_BATCHES, 
-  BRANCHES 
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 // --- Types ---
 
@@ -72,17 +67,17 @@ const ResultBadge = ({ result }: { result: QCCheck['result'] }) => {
 
 // --- Tabs ---
 
-const QCChecksTab = () => {
+const QCChecksTab = ({ qcChecks, productionBatches, ingredientBatches, saveItem }: { qcChecks: any[], productionBatches: any[], ingredientBatches: any[], saveItem: any }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredChecks = useMemo(() => {
-    return (QC_CHECKS || []).filter(qc => 
+    return (qcChecks || []).filter(qc => 
       qc.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       qc.checkType.toLowerCase().includes(searchTerm.toLowerCase()) ||
       qc.checkedBy.toLowerCase().includes(searchTerm.toLowerCase())
     ).sort((a, b) => b.checkDate.localeCompare(a.checkDate));
-  }, [searchTerm]);
+  }, [qcChecks, searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -210,7 +205,7 @@ const QCChecksTab = () => {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-charcoal/40 uppercase tracking-widest ml-1">Select Batch</label>
                     <select className="w-full p-4 bg-secondary-cream/50 border border-charcoal/5 rounded-2xl font-bold text-xs uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-honey/20">
-                      {(PRODUCTION_BATCHES || []).map(b => <option key={b.id}>{b.id}</option>)}
+                      {(productionBatches || []).map(b => <option key={b.id}>{b.id}</option>)}
                     </select>
                   </div>
                 </div>
@@ -258,9 +253,9 @@ const QCChecksTab = () => {
   );
 };
 
-const QCAnalyticsTab = () => {
+const QCAnalyticsTab = ({ qcChecks, ingredientBatches }: { qcChecks: any[], ingredientBatches: any[] }) => {
   const distributionData = useMemo(() => {
-    const counts = (QC_CHECKS || []).reduce((acc: any, curr) => {
+    const counts = (qcChecks || []).reduce((acc: any, curr) => {
       acc[curr.result] = (acc[curr.result] || 0) + 1;
       return acc;
     }, {});
@@ -269,27 +264,27 @@ const QCAnalyticsTab = () => {
       { name: 'Fail', value: counts.Fail || 0, color: '#EF4444' },
       { name: 'Conditional', value: counts.Conditional || 0, color: '#F59E0B' },
     ];
-  }, []);
+  }, [qcChecks]);
 
   const failureCategories = useMemo(() => {
-    const counts = (QC_CHECKS || []).filter(qc => qc.failureCategory).reduce((acc: any, curr) => {
+    const counts = (qcChecks || []).filter(qc => qc.failureCategory).reduce((acc: any, curr) => {
       acc[curr.failureCategory!] = (acc[curr.failureCategory!] || 0) + 1;
       return acc;
     }, {});
     return Object.entries(counts)
       .map(([name, count]) => ({ name, count: count as number }))
       .sort((a, b) => b.count - a.count);
-  }, []);
+  }, [qcChecks]);
 
   const checkTypePerformance = useMemo(() => {
-    const types = Array.from(new Set((QC_CHECKS || []).map(qc => qc.checkType)));
+    const types = Array.from(new Set((qcChecks || []).map(qc => qc.checkType)));
     return types.map(type => {
-      const typeChecks = (QC_CHECKS || []).filter(qc => qc.checkType === type);
+      const typeChecks = (qcChecks || []).filter(qc => qc.checkType === type);
       const pass = typeChecks.filter(qc => qc.result === 'Pass').length;
       const fail = typeChecks.filter(qc => qc.result === 'Fail').length;
       return { type, pass, fail };
     });
-  }, []);
+  }, [qcChecks]);
 
   return (
     <div className="space-y-8">
@@ -377,8 +372,8 @@ const QCAnalyticsTab = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-charcoal/5">
-            {(INGREDIENT_BATCHES || []).slice(0, 5).map(batch => {
-              const checks = (QC_CHECKS || []).filter(qc => qc.ingredientBatchId === batch.id);
+            {(ingredientBatches || []).slice(0, 5).map(batch => {
+              const checks = (qcChecks || []).filter(qc => qc.ingredientBatchId === batch.id);
               const total = checks.length;
               const pass = checks.filter(qc => qc.result === 'Pass').length;
               const rate = total > 0 ? (pass / total) * 100 : 0;
@@ -405,7 +400,24 @@ const QCAnalyticsTab = () => {
 // --- Main Page ---
 
 export default function QualityControl() {
+  const { 
+    qcChecks: QC_CHECKS, 
+    productionBatches: PRODUCTION_BATCHES, 
+    ingredientBatches: INGREDIENT_BATCHES, 
+    branches: BRANCHES, 
+    loading,
+    saveItem
+  } = useData();
+
   const [activeTab, setActiveTab] = useState<'checks' | 'analytics'>('checks');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -452,7 +464,9 @@ export default function QualityControl() {
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
         >
-          {activeTab === 'checks' ? <QCChecksTab /> : <QCAnalyticsTab />}
+          {activeTab === 'checks' 
+            ? <QCChecksTab qcChecks={QC_CHECKS} productionBatches={PRODUCTION_BATCHES} ingredientBatches={INGREDIENT_BATCHES} saveItem={saveItem} /> 
+            : <QCAnalyticsTab qcChecks={QC_CHECKS} ingredientBatches={INGREDIENT_BATCHES} />}
         </motion.div>
       </AnimatePresence>
     </div>

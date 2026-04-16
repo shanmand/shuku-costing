@@ -35,10 +35,7 @@ import {
   Line, 
   Legend 
 } from 'recharts';
-import { 
-  COMPLIANCE_RECORDS, 
-  BRANCHES 
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 // --- Types ---
 
@@ -65,7 +62,7 @@ const Badge = ({ children, color = 'gray' }: { children: React.ReactNode, color?
   );
 };
 
-const ScoreCaptureModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+const ScoreCaptureModal = ({ isOpen, onClose, branches }: { isOpen: boolean, onClose: () => void, branches: any[] }) => {
   const [categories, setCategories] = useState([
     { name: 'Personal Hygiene', score: 0, max: 25 },
     { name: 'Premises', score: 0, max: 25 },
@@ -97,7 +94,7 @@ const ScoreCaptureModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Branch</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
-              {(BRANCHES || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(branches || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -177,6 +174,13 @@ const ScoreCaptureModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =
 // --- Main Page ---
 
 export default function CompliancePage() {
+  const { 
+    complianceRecords: COMPLIANCE_RECORDS, 
+    branches: BRANCHES, 
+    loading,
+    saveItem
+  } = useData();
+
   const [activeTab, setActiveTab] = useState<'list' | 'charts'>('list');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -203,6 +207,14 @@ export default function CompliancePage() {
   ];
 
   const COLORS = ['#F59E0B', '#1C1C1E', '#D97706', '#4B5563'];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -397,7 +409,7 @@ export default function CompliancePage() {
         </div>
       )}
 
-      <ScoreCaptureModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <ScoreCaptureModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} branches={BRANCHES} />
     </div>
   );
 }

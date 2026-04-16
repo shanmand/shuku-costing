@@ -17,11 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import { 
-  BRANCHES, 
-  PRODUCTION_BATCHES, 
-  INGREDIENTS 
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 // --- Helpers ---
 
@@ -51,12 +47,12 @@ const Badge = ({ children, color = 'gray' }: { children: React.ReactNode, color?
   );
 };
 
-const BranchCard = ({ branch }: { branch: any, key?: string }) => {
+const BranchCard = ({ branch, productionBatches, ingredients }: { branch: any, productionBatches: any[], ingredients: any[], key?: string }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isActive, setIsActive] = useState(branch.isActive);
 
-  const activeBatches = (PRODUCTION_BATCHES || []).filter(b => b.branchId === branch.id && b.status === 'In Progress').length;
-  const activeIngredients = (INGREDIENTS || []).filter(i => i.currentStock > 0).length; // Simplified for demo
+  const activeBatches = (productionBatches || []).filter(b => b.branchId === branch.id && b.status === 'In Progress').length;
+  const activeIngredients = (ingredients || []).filter(i => i.currentStock > 0).length; // Simplified for demo
   const mtdCost = 125400 + (Math.random() * 50000); // Mocked MTD Cost
 
   return (
@@ -127,7 +123,45 @@ const BranchCard = ({ branch }: { branch: any, key?: string }) => {
 };
 
 const NewBranchModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+  const { saveItem } = useData();
+  const [formData, setFormData] = useState({
+    name: '',
+    location: '',
+    manager: '',
+    contactNumber: '',
+    email: '',
+    isActive: true
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleSubmit = async () => {
+    if (!formData.name) {
+      toast.error('Branch name is required');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await saveItem('branches', formData);
+      toast.success('New branch created successfully');
+      onClose();
+      setFormData({
+        name: '',
+        location: '',
+        manager: '',
+        contactNumber: '',
+        email: '',
+        isActive: true
+      });
+    } catch (error) {
+      console.error('Error creating branch:', error);
+      toast.error('Failed to create branch');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -146,36 +180,73 @@ const NewBranchModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => v
         <div className="p-6 grid grid-cols-2 gap-6">
           <div className="space-y-1 col-span-2">
             <label className="text-xs font-bold text-gray-500 uppercase">Branch Name</label>
-            <input type="text" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" placeholder="e.g. West Branch (Roodepoort)" />
+            <input 
+              type="text" 
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" 
+              placeholder="e.g. West Branch (Roodepoort)" 
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
           </div>
           <div className="space-y-1 col-span-2">
             <label className="text-xs font-bold text-gray-500 uppercase">Location</label>
-            <input type="text" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Full address..." />
+            <input 
+              type="text" 
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" 
+              placeholder="Full address..." 
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+            />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase">Manager</label>
-            <input type="text" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Name..." />
+            <input 
+              type="text" 
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" 
+              placeholder="Name..." 
+              value={formData.manager}
+              onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
+            />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase">Contact Number</label>
-            <input type="text" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" placeholder="011..." />
+            <input 
+              type="text" 
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" 
+              placeholder="011..." 
+              value={formData.contactNumber}
+              onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+            />
           </div>
           <div className="space-y-1 col-span-2">
             <label className="text-xs font-bold text-gray-500 uppercase">Email Address</label>
-            <input type="email" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" placeholder="branch@shuku.co.za" />
+            <input 
+              type="email" 
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" 
+              placeholder="branch@shuku.co.za" 
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
           </div>
         </div>
 
         <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-          <button onClick={onClose} className="px-6 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
           <button 
-            onClick={() => {
-              toast.success('New branch created! (Mock)');
-              onClose();
-            }}
-            className="px-6 py-2 bg-amber-600 text-white font-bold rounded-lg hover:bg-amber-700 transition-colors shadow-lg shadow-amber-200"
+            disabled={isSubmitting}
+            onClick={onClose} 
+            className="px-6 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded-lg transition-colors"
           >
-            Create Branch
+            Cancel
+          </button>
+          <button 
+            disabled={isSubmitting}
+            onClick={handleSubmit}
+            className="px-6 py-2 bg-amber-600 text-white font-bold rounded-lg hover:bg-amber-700 transition-colors shadow-lg shadow-amber-200 disabled:opacity-50 flex items-center gap-2"
+          >
+            {isSubmitting ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : null}
+            {isSubmitting ? 'CREATING...' : 'CREATE BRANCH'}
           </button>
         </div>
       </motion.div>
@@ -186,6 +257,14 @@ const NewBranchModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => v
 // --- Main Page ---
 
 export default function BranchesPage() {
+  const { 
+    branches: BRANCHES, 
+    productionBatches: PRODUCTION_BATCHES, 
+    ingredients: INGREDIENTS, 
+    loading,
+    saveItem
+  } = useData();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const costComparisonData = useMemo(() => {
@@ -197,6 +276,14 @@ export default function BranchesPage() {
       waste: 2000 + (Math.random() * 3000)
     }));
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -217,7 +304,7 @@ export default function BranchesPage() {
       {/* Branch Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
         {(BRANCHES || []).map(branch => (
-          <BranchCard key={branch.id} branch={branch} />
+          <BranchCard key={branch.id} branch={branch} productionBatches={PRODUCTION_BATCHES} ingredients={INGREDIENTS} />
         ))}
       </div>
 

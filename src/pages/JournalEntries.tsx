@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import { JOURNAL_ENTRIES, BRANCHES } from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 // --- Helpers ---
 
@@ -315,6 +315,13 @@ const GenerateJournalsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: 
 // --- Main Page ---
 
 export default function JournalEntries() {
+  const { 
+    journalEntries: JOURNAL_ENTRIES, 
+    branches: BRANCHES, 
+    loading,
+    saveItem
+  } = useData();
+
   const [selectedJournal, setSelectedJournal] = useState<JournalEntry | null>(null);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -348,6 +355,14 @@ export default function JournalEntries() {
       default: return 'gray';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (selectedJournal) {
     return <JournalDetail journal={selectedJournal} onBack={() => setSelectedJournal(null)} />;

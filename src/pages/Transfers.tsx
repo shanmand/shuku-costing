@@ -18,13 +18,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import { 
-  BRANCH_TRANSFERS, 
-  INGREDIENTS, 
-  INGREDIENT_BATCHES, 
-  BRANCHES,
-  SUPPLIERS
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 // --- Helpers ---
 
@@ -53,16 +47,16 @@ const Badge = ({ children, color = 'gray' }: { children: React.ReactNode, color?
   );
 };
 
-const NewTransferModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+const NewTransferModal = ({ isOpen, onClose, ingredientBatches, branches, ingredients }: { isOpen: boolean, onClose: () => void, ingredientBatches: any[], branches: any[], ingredients: any[] }) => {
   const [selectedIngredient, setSelectedIngredient] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
   
   const availableBatches = useMemo(() => {
     if (!selectedIngredient || !selectedBranch) return [];
-    return (INGREDIENT_BATCHES || []).filter(b => 
+    return (ingredientBatches || []).filter(b => 
       b.ingredientId === selectedIngredient && b.branchId === selectedBranch
     );
-  }, [selectedIngredient, selectedBranch]);
+  }, [selectedIngredient, selectedBranch, ingredientBatches]);
 
   if (!isOpen) return null;
 
@@ -89,14 +83,14 @@ const NewTransferModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
               onChange={(e) => setSelectedBranch(e.target.value)}
             >
               <option value="">Select Source...</option>
-              {(BRANCHES || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(branches || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">To Branch</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
               <option value="">Select Destination...</option>
-              {(BRANCHES || []).map(b => b.id !== selectedBranch && <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(branches || []).map(b => b.id !== selectedBranch && <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -107,7 +101,7 @@ const NewTransferModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
               onChange={(e) => setSelectedIngredient(e.target.value)}
             >
               <option value="">Select Ingredient...</option>
-              {(INGREDIENTS || []).map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+              {(ingredients || []).map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -179,6 +173,15 @@ const NewTransferModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
 // --- Main Page ---
 
 export default function TransfersPage() {
+  const { 
+    transfers: BRANCH_TRANSFERS, 
+    ingredients: INGREDIENTS, 
+    ingredientBatches: INGREDIENT_BATCHES, 
+    branches: BRANCHES, 
+    loading,
+    saveItem
+  } = useData();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -198,6 +201,14 @@ export default function TransfersPage() {
       default: return 'gray';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -317,7 +328,13 @@ export default function TransfersPage() {
         </table>
       </div>
 
-      <NewTransferModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <NewTransferModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        ingredientBatches={INGREDIENT_BATCHES}
+        branches={BRANCHES}
+        ingredients={INGREDIENTS}
+      />
     </div>
   );
 }

@@ -18,13 +18,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  SUPPLIERS, 
-  INGREDIENT_BATCHES, 
-  INGREDIENTS,
-  INGREDIENT_CATEGORIES,
-  QC_CHECKS
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 // --- Components ---
 
@@ -44,7 +38,7 @@ const Badge = ({ children, color = 'gray' }: { children: React.ReactNode, color?
   );
 };
 
-const NewSupplierModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+const NewSupplierModal = ({ isOpen, onClose, categories }: { isOpen: boolean, onClose: () => void, categories: any[] }) => {
   if (!isOpen) return null;
 
   return (
@@ -91,7 +85,7 @@ const NewSupplierModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
           <div className="space-y-1 col-span-2">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Ingredient Categories Supplied</label>
             <div className="grid grid-cols-3 gap-2 mt-2">
-              {(INGREDIENT_CATEGORIES || []).map(cat => (
+              {(categories || []).map(cat => (
                 <label key={cat.id} className="flex items-center gap-2 text-xs font-medium text-gray-600 cursor-pointer hover:text-amber-600">
                   <input type="checkbox" className="rounded border-gray-300 text-amber-600 focus:ring-amber-500" />
                   {cat.name}
@@ -110,13 +104,13 @@ const NewSupplierModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
   );
 };
 
-const SupplierRow = ({ supplier }: { supplier: typeof SUPPLIERS[0], key?: string }) => {
+const SupplierRow = ({ supplier, ingredientBatches, qcChecks, ingredients, categories }: { supplier: any, ingredientBatches: any[], qcChecks: any[], ingredients: any[], categories: any[], key?: string }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Calculate performance metric
-  const supplierBatches = (INGREDIENT_BATCHES || []).filter(b => b.supplierId === supplier.id);
+  const supplierBatches = (ingredientBatches || []).filter(b => b.supplierId === supplier.id);
   const supplierBatchIds = supplierBatches.map(b => b.id);
-  const supplierQCs = (QC_CHECKS || []).filter(qc => supplierBatchIds.includes(qc.batchId));
+  const supplierQCs = (qcChecks || []).filter(qc => supplierBatchIds.includes(qc.batchId));
   const passCount = supplierQCs.filter(qc => qc.status === 'Pass').length;
   const performance = supplierQCs.length > 0 ? (passCount / supplierQCs.length) * 100 : 100;
 
@@ -193,7 +187,7 @@ const SupplierRow = ({ supplier }: { supplier: typeof SUPPLIERS[0], key?: string
                       Categories Supplied
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {(INGREDIENT_CATEGORIES || []).slice(0, 3).map(cat => (
+                      {(categories || []).slice(0, 3).map(cat => (
                         <span key={cat.id} className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-600 shadow-sm">
                           {cat.name}
                         </span>
@@ -220,7 +214,7 @@ const SupplierRow = ({ supplier }: { supplier: typeof SUPPLIERS[0], key?: string
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {(supplierBatches || []).slice(0, 5).map(batch => {
-                            const ingredient = (INGREDIENTS || []).find(i => i.id === batch.ingredientId);
+                            const ingredient = (ingredients || []).find(i => i.id === batch.ingredientId);
                             return (
                               <tr key={batch.id}>
                                 <td className="px-4 py-2 font-mono font-bold text-gray-500">{batch.batchNumber}</td>
@@ -250,8 +244,26 @@ const SupplierRow = ({ supplier }: { supplier: typeof SUPPLIERS[0], key?: string
 // --- Main Page ---
 
 export default function SuppliersPage() {
+  const { 
+    suppliers: SUPPLIERS, 
+    ingredientBatches: INGREDIENT_BATCHES, 
+    ingredients: INGREDIENTS, 
+    categories: INGREDIENT_CATEGORIES, 
+    qcChecks: QC_CHECKS, 
+    loading,
+    saveItem
+  } = useData();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -304,13 +316,20 @@ export default function SuppliersPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {(SUPPLIERS || []).map((supplier) => (
-              <SupplierRow key={supplier.id} supplier={supplier} />
+              <SupplierRow 
+                key={supplier.id} 
+                supplier={supplier} 
+                ingredientBatches={INGREDIENT_BATCHES}
+                qcChecks={QC_CHECKS}
+                ingredients={INGREDIENTS}
+                categories={INGREDIENT_CATEGORIES}
+              />
             ))}
           </tbody>
         </table>
       </div>
 
-      <NewSupplierModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <NewSupplierModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} categories={INGREDIENT_CATEGORIES} />
     </div>
   );
 }

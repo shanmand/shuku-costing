@@ -64,34 +64,55 @@ const CodeBlock = ({ code, title }: { code: string, title: string }) => {
 const SCHEMA_SQL = `-- SHUKU COSTING SYSTEM - PostgreSQL Schema (IFRS Compliant)
 -- South African Bakery Context
 
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- ENUMS
-CREATE TYPE stage_name AS ENUM (
-  'Stores', 'Staging', 'Mixing', 'Weighing/Dividing', 'Proving', 
-  'Baking', 'Cooling', 'Toppings', 'Packaging', 'Storage', 'Distribution'
-);
+DO $$ BEGIN
+    CREATE TYPE stage_name AS ENUM (
+      'Stores', 'Staging', 'Mixing', 'Weighing/Dividing', 'Proving', 
+      'Baking', 'Cooling', 'Toppings', 'Packaging', 'Storage', 'Distribution'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE journal_type AS ENUM (
-  'MaterialConsumption', 'LabourAllocation', 'OverheadAbsorption', 
-  'StageTransfer', 'FGCompletion', 'COGSRecognition', 'WasteWriteOff'
-);
+DO $$ BEGIN
+    CREATE TYPE journal_type AS ENUM (
+      'MaterialConsumption', 'LabourAllocation', 'OverheadAbsorption', 
+      'StageTransfer', 'FGCompletion', 'COGSRecognition', 'WasteWriteOff'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE batch_status AS ENUM ('In Progress', 'Completed', 'On Hold', 'Cancelled');
-CREATE TYPE shift_type AS ENUM ('morning', 'afternoon', 'evening', 'night');
+DO $$ BEGIN
+    CREATE TYPE batch_status AS ENUM ('In Progress', 'Completed', 'On Hold', 'Cancelled');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE shift_type AS ENUM ('morning', 'afternoon', 'evening', 'night');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- TABLES
 
 -- Core
-CREATE TABLE branches (
+CREATE TABLE IF NOT EXISTS branches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   location TEXT,
   manager TEXT,
+  contact_number TEXT,
+  email TEXT,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE ingredient_categories (
+CREATE TABLE IF NOT EXISTS ingredient_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
@@ -99,7 +120,7 @@ CREATE TABLE ingredient_categories (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE suppliers (
+CREATE TABLE IF NOT EXISTS suppliers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   contact_person TEXT,
@@ -112,7 +133,7 @@ CREATE TABLE suppliers (
 );
 
 -- Inventory
-CREATE TABLE ingredients (
+CREATE TABLE IF NOT EXISTS ingredients (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   category_id UUID REFERENCES ingredient_categories(id),
@@ -125,7 +146,7 @@ CREATE TABLE ingredients (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE ingredient_batches (
+CREATE TABLE IF NOT EXISTS ingredient_batches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ingredient_id UUID REFERENCES ingredients(id),
   batch_number TEXT NOT NULL,
@@ -142,7 +163,7 @@ CREATE TABLE ingredient_batches (
 );
 
 -- Recipes
-CREATE TABLE recipes (
+CREATE TABLE IF NOT EXISTS recipes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   branch_id UUID REFERENCES branches(id),
@@ -152,7 +173,7 @@ CREATE TABLE recipes (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE recipe_versions (
+CREATE TABLE IF NOT EXISTS recipe_versions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   recipe_id UUID REFERENCES recipes(id),
   version_number TEXT NOT NULL,
@@ -160,7 +181,7 @@ CREATE TABLE recipe_versions (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE recipe_bom_lines (
+CREATE TABLE IF NOT EXISTS recipe_bom_lines (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   version_id UUID REFERENCES recipe_versions(id),
   ingredient_id UUID REFERENCES ingredients(id),
@@ -169,7 +190,7 @@ CREATE TABLE recipe_bom_lines (
   unit TEXT NOT NULL
 );
 
-CREATE TABLE packaging_items (
+CREATE TABLE IF NOT EXISTS packaging_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   recipe_id UUID REFERENCES recipes(id),
   name TEXT NOT NULL,
@@ -179,7 +200,7 @@ CREATE TABLE packaging_items (
 );
 
 -- Finished Goods
-CREATE TABLE skus (
+CREATE TABLE IF NOT EXISTS skus (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   recipe_id UUID REFERENCES recipes(id),
   name TEXT NOT NULL,
@@ -192,7 +213,7 @@ CREATE TABLE skus (
 );
 
 -- Labour
-CREATE TABLE crews (
+CREATE TABLE IF NOT EXISTS crews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   branch_id UUID REFERENCES branches(id),
@@ -201,7 +222,7 @@ CREATE TABLE crews (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE employees (
+CREATE TABLE IF NOT EXISTS employees (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   employee_code TEXT UNIQUE NOT NULL,
@@ -213,7 +234,7 @@ CREATE TABLE employees (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE employee_rate_history (
+CREATE TABLE IF NOT EXISTS employee_rate_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID REFERENCES employees(id),
   effective_date DATE NOT NULL,
@@ -225,7 +246,7 @@ CREATE TABLE employee_rate_history (
 );
 
 -- Production
-CREATE TABLE production_batches (
+CREATE TABLE IF NOT EXISTS production_batches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   recipe_id UUID REFERENCES recipes(id),
   branch_id UUID REFERENCES branches(id),
@@ -239,7 +260,7 @@ CREATE TABLE production_batches (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE production_stage_records (
+CREATE TABLE IF NOT EXISTS production_stage_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   batch_id UUID REFERENCES production_batches(id),
   stage stage_name NOT NULL,
@@ -254,7 +275,7 @@ CREATE TABLE production_stage_records (
 );
 
 -- Accounting
-CREATE TABLE journal_entries (
+CREATE TABLE IF NOT EXISTS journal_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   period TEXT NOT NULL, -- YYYY-MM
   date DATE NOT NULL,
@@ -267,7 +288,7 @@ CREATE TABLE journal_entries (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE journal_lines (
+CREATE TABLE IF NOT EXISTS journal_lines (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   journal_id UUID REFERENCES journal_entries(id),
   account_code TEXT NOT NULL,
@@ -278,7 +299,7 @@ CREATE TABLE journal_lines (
 );
 
 -- Quality & Compliance
-CREATE TABLE compliance_audits (
+CREATE TABLE IF NOT EXISTS compliance_audits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   branch_id UUID REFERENCES branches(id),
   audit_date DATE NOT NULL,
@@ -291,7 +312,7 @@ CREATE TABLE compliance_audits (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE audit_category_scores (
+CREATE TABLE IF NOT EXISTS audit_category_scores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   audit_id UUID REFERENCES compliance_audits(id),
   category_name TEXT NOT NULL,
@@ -299,7 +320,7 @@ CREATE TABLE audit_category_scores (
   max_score INTEGER NOT NULL
 );
 
-CREATE TABLE qc_checks (
+CREATE TABLE IF NOT EXISTS qc_checks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   batch_id UUID REFERENCES production_batches(id),
   ingredient_batch_id UUID REFERENCES ingredient_batches(id),
@@ -313,7 +334,7 @@ CREATE TABLE qc_checks (
 );
 
 -- Metadata
-CREATE TABLE material_price_history (
+CREATE TABLE IF NOT EXISTS material_price_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ingredient_id UUID REFERENCES ingredients(id),
   effective_date DATE NOT NULL,
@@ -322,13 +343,13 @@ CREATE TABLE material_price_history (
   change_reason TEXT
 );
 
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
+  role_name TEXT NOT NULL UNIQUE,
   permissions JSONB DEFAULT '{}'
 );
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT UNIQUE NOT NULL,
   name TEXT,
@@ -455,12 +476,55 @@ CREATE TRIGGER tr_generate_cogs
 AFTER INSERT ON production_stage_records
 FOR EACH ROW EXECUTE FUNCTION generate_cogs_journal_trigger();
 
--- 6. RLS Policies (Branch Scoping)
+-- 6. RLS Policies & Systematic Access
+-- Enable Row Level Security (RLS) for all tables
+ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ingredient_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ingredients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE packaging_materials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recipes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skus ENABLE ROW LEVEL SECURITY;
+ALTER TABLE crews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE production_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ingredient_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE qc_checks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE compliance_audits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE material_price_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE employee_rate_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transfers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rate_change_reasons ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY branch_isolation_policy ON production_batches
-FOR ALL TO authenticated
-USING (branch_id = (SELECT branch_id FROM users WHERE id = auth.uid()));
+-- Systematic Policy Applier (Allow all authenticated access)
+DO $$ 
+DECLARE
+    t text;
+    tables text[] := ARRAY[
+        'branches', 'suppliers', 'ingredient_categories', 'ingredients', 
+        'packaging_materials', 'recipes', 'skus', 'crews', 'employees', 
+        'production_batches', 'ingredient_batches', 'qc_checks', 
+        'compliance_audits', 'journal_entries', 'material_price_history', 
+        'employee_rate_history', 'transfers', 'roles', 'users', 'rate_change_reasons'
+    ];
+BEGIN
+    FOREACH t IN ARRAY tables LOOP
+        EXECUTE format('DROP POLICY IF EXISTS "Allow authenticated read %%I" ON %%I', t, t);
+        EXECUTE format('CREATE POLICY "Allow authenticated read %%I" ON %%I FOR SELECT TO authenticated USING (true)', t, t);
+        
+        EXECUTE format('DROP POLICY IF EXISTS "Allow authenticated insert %%I" ON %%I', t, t);
+        EXECUTE format('CREATE POLICY "Allow authenticated insert %%I" ON %%I FOR INSERT TO authenticated WITH CHECK (true)', t, t);
+        
+        EXECUTE format('DROP POLICY IF EXISTS "Allow authenticated update %%I" ON %%I', t, t);
+        EXECUTE format('CREATE POLICY "Allow authenticated update %%I" ON %%I FOR UPDATE TO authenticated USING (true)', t, t);
+        
+        EXECUTE format('DROP POLICY IF EXISTS "Allow authenticated delete %%I" ON %%I', t, t);
+        EXECUTE format('CREATE POLICY "Allow authenticated delete %%I" ON %%I FOR DELETE TO authenticated USING (true)', t, t);
+    END LOOP;
+END $$;
 `;
 
 const QUERIES_SQL = [

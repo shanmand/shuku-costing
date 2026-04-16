@@ -25,15 +25,7 @@ import {
   Tooltip, 
   Legend 
 } from 'recharts';
-import { 
-  BRANCHES, 
-  INGREDIENTS, 
-  PRODUCTION_BATCHES, 
-  QC_CHECKS, 
-  RECIPES, 
-  BRANCH_TRANSFERS, 
-  COMPLIANCE_RECORDS 
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 // --- Constants ---
 
@@ -56,6 +48,17 @@ const formatCurrency = (value: number) => {
 // --- Components ---
 
 const Dashboard = () => {
+  const { 
+    branches: BRANCHES, 
+    ingredients: INGREDIENTS, 
+    productionBatches: PRODUCTION_BATCHES, 
+    qcChecks: QC_CHECKS, 
+    recipes: RECIPES, 
+    transfers: BRANCH_TRANSFERS, 
+    complianceRecords: COMPLIANCE_RECORDS,
+    loading 
+  } = useData();
+
   // 1. KPI Calculations
   const stats = useMemo(() => {
     // Calculate Total Production Cost (Simplified for demo)
@@ -153,6 +156,14 @@ const Dashboard = () => {
       return auditDate >= today && auditDate <= thirtyDaysFromNow;
     });
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">

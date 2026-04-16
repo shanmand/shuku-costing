@@ -31,14 +31,7 @@ import {
   Target
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  PRODUCTION_BATCHES, 
-  QC_CHECKS, 
-  BRANCHES, 
-  CREWS, 
-  RECIPES, 
-  INGREDIENTS 
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 // --- Mock Data for Analytics ---
 const STAGE_WASTE_DATA = [
@@ -79,7 +72,7 @@ const StatCard = ({ title, value, subValue, icon: Icon, trend, color = 'amber' }
 
 // --- Tabs ---
 
-const WasteEfficiencyTab = () => {
+const WasteEfficiencyTab = ({ qcChecks, productionBatches, recipes }: { qcChecks: any[], productionBatches: any[], recipes: any[] }) => {
   const worstStage = useMemo(() => {
     return [...STAGE_WASTE_DATA].sort((a, b) => b.waste - a.waste)[0];
   }, []);
@@ -174,10 +167,10 @@ const WasteEfficiencyTab = () => {
   );
 };
 
-const QCWasteTrendTab = () => {
+const QCWasteTrendTab = ({ qcChecks }: { qcChecks: any[], productionBatches: any[], recipes: any[] }) => {
   const dailyWasteData = useMemo(() => {
     // Group QC fails by date
-    const fails = (QC_CHECKS || []).filter(qc => qc.result === 'Fail' && qc.wasteCost > 0);
+    const fails = (qcChecks || []).filter(qc => qc.result === 'Fail' && qc.wasteCost > 0);
     const grouped = fails.reduce((acc: any, curr) => {
       const date = curr.checkDate;
       acc[date] = (acc[date] || 0) + curr.wasteCost;
@@ -212,12 +205,12 @@ const QCWasteTrendTab = () => {
   );
 };
 
-const OutputPredictionTab = () => {
+const OutputPredictionTab = ({ ingredients, productionBatches, recipes }: { ingredients: any[], productionBatches: any[], recipes: any[] }) => {
   const [wasteOverride, setWasteOverride] = useState(1.5);
   
   const activeBatches = useMemo(() => {
-    return (PRODUCTION_BATCHES || []).filter(b => b.status === 'In Progress').map(b => {
-      const recipe = RECIPES.find(r => r.id === b.recipeId);
+    return (productionBatches || []).filter(b => b.status === 'In Progress').map(b => {
+      const recipe = recipes.find(r => r.id === b.recipeId);
       const predicted = Math.floor(b.plannedQty * (1 - wasteOverride / 100));
       return {
         ...b,
@@ -316,7 +309,7 @@ const OutputPredictionTab = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-charcoal/5">
-              {(INGREDIENTS || []).slice(0, 6).map(ing => {
+              {(ingredients || []).slice(0, 6).map(ing => {
                 const multiplier = 1 / (1 - wasteOverride / 100);
                 const bomQty = 100; // Mocked base
                 return (
@@ -343,7 +336,25 @@ const OutputPredictionTab = () => {
 // --- Main Page ---
 
 export default function Analytics() {
+  const { 
+    productionBatches: PRODUCTION_BATCHES, 
+    qcChecks: QC_CHECKS, 
+    branches: BRANCHES, 
+    crews: CREWS, 
+    recipes: RECIPES, 
+    ingredients: INGREDIENTS, 
+    loading
+  } = useData();
+
   const [activeTab, setActiveTab] = useState<'waste' | 'qc' | 'prediction'>('waste');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -402,9 +413,9 @@ export default function Analytics() {
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
         >
-          {activeTab === 'waste' && <WasteEfficiencyTab />}
-          {activeTab === 'qc' && <QCWasteTrendTab />}
-          {activeTab === 'prediction' && <OutputPredictionTab />}
+          {activeTab === 'waste' && <WasteEfficiencyTab qcChecks={QC_CHECKS} productionBatches={PRODUCTION_BATCHES} recipes={RECIPES} />}
+          {activeTab === 'qc' && <QCWasteTrendTab qcChecks={QC_CHECKS} productionBatches={PRODUCTION_BATCHES} recipes={RECIPES} />}
+          {activeTab === 'prediction' && <OutputPredictionTab ingredients={INGREDIENTS} productionBatches={PRODUCTION_BATCHES} recipes={RECIPES} />}
         </motion.div>
       </AnimatePresence>
     </div>

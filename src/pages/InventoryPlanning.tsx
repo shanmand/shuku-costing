@@ -15,13 +15,7 @@ import {
   FlaskConical
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  PRODUCTION_BATCHES, 
-  RECIPES, 
-  INGREDIENTS, 
-  INGREDIENT_BATCHES, 
-  BRANCHES 
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 // --- Types ---
 
@@ -59,6 +53,15 @@ const CoverageBar = ({ percent }: { percent: number }) => {
 // --- Main Page ---
 
 export default function InventoryPlanning() {
+  const { 
+    productionBatches: PRODUCTION_BATCHES, 
+    recipes: RECIPES, 
+    ingredients: INGREDIENTS, 
+    ingredientBatches: INGREDIENT_BATCHES, 
+    branches: BRANCHES, 
+    loading
+  } = useData();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('all');
 
@@ -139,6 +142,14 @@ export default function InventoryPlanning() {
     link.click();
     document.body.removeChild(link);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">

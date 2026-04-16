@@ -20,18 +20,7 @@ import {
   FileText,
   FlaskConical
 } from 'lucide-react';
-import { 
-  PRODUCTION_BATCHES, 
-  RECIPES, 
-  BRANCHES, 
-  CREWS, 
-  EMPLOYEES, 
-  EMPLOYEE_RATE_HISTORY, 
-  INGREDIENTS, 
-  MATERIAL_PRICE_HISTORY,
-  SKUS,
-  QC_CHECKS
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 import { toast } from 'sonner';
 
@@ -60,20 +49,20 @@ const formatCurrency = (value: number) => {
   }).format(value).replace(/,/g, ' ');
 };
 
-const getEmployeeRate = (employeeId: string, date: string) => {
-  const history = (EMPLOYEE_RATE_HISTORY || [])
+const getEmployeeRate = (employeeId: string, date: string, employeeRateHistory: any[]) => {
+  const history = (employeeRateHistory || [])
     .filter(h => h.employeeId === employeeId && new Date(h.effectiveDate) <= new Date(date))
     .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
   
   return history[0] || { standardRate: 0, overtimeRate: 0, effectiveDate: 'N/A' };
 };
 
-const getMaterialPrice = (ingredientId: string, date: string) => {
-  const history = (MATERIAL_PRICE_HISTORY || [])
+const getMaterialPrice = (ingredientId: string, date: string, materialPriceHistory: any[], ingredients: any[]) => {
+  const history = (materialPriceHistory || [])
     .filter(h => h.ingredientId === ingredientId && new Date(h.effectiveDate) <= new Date(date))
     .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
   
-  const ingredient = (INGREDIENTS || []).find(i => i.id === ingredientId);
+  const ingredient = (ingredients || []).find(i => i.id === ingredientId);
   return {
     price: history[0]?.unitCost || ingredient?.standardCost || 0,
     effectiveDate: history[0]?.effectiveDate || 'Standard',
@@ -84,6 +73,21 @@ const getMaterialPrice = (ingredientId: string, date: string) => {
 // --- Components ---
 
 const Production = () => {
+  const { 
+    productionBatches: PRODUCTION_BATCHES, 
+    recipes: RECIPES, 
+    branches: BRANCHES, 
+    crews: CREWS, 
+    employees: EMPLOYEES, 
+    ingredients: INGREDIENTS, 
+    skus: SKUS,
+    qcChecks: QC_CHECKS,
+    employeeRateHistory: EMPLOYEE_RATE_HISTORY,
+    materialPriceHistory: MATERIAL_PRICE_HISTORY,
+    loading,
+    saveItem
+  } = useData();
+
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
   const [isNewBatchModalOpen, setIsNewBatchModalOpen] = useState(false);
@@ -106,6 +110,14 @@ const Production = () => {
              (!filters.status || b.status === filters.status);
     });
   }, [filters]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -345,12 +357,24 @@ const Production = () => {
         <AdvanceStageModal 
           batch={selectedBatch} 
           onClose={() => setIsAdvanceModalOpen(false)} 
+          recipes={RECIPES}
+          crews={CREWS}
+          employees={EMPLOYEES}
+          ingredients={INGREDIENTS}
+          skus={SKUS}
+          employeeRateHistory={EMPLOYEE_RATE_HISTORY}
+          materialPriceHistory={MATERIAL_PRICE_HISTORY}
         />
       )}
 
       {/* New Batch Modal */}
       {isNewBatchModalOpen && (
-        <NewBatchModal onClose={() => setIsNewBatchModalOpen(false)} />
+        <NewBatchModal 
+          onClose={() => setIsNewBatchModalOpen(false)} 
+          recipes={RECIPES}
+          branches={BRANCHES}
+          crews={CREWS}
+        />
       )}
     </div>
   );
@@ -387,11 +411,11 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-const AdvanceStageModal = ({ batch, onClose }: { batch: any, onClose: () => void }) => {
+const AdvanceStageModal = ({ batch, onClose, recipes, crews, employees, ingredients, skus, employeeRateHistory, materialPriceHistory }: { batch: any, onClose: () => void, recipes: any[], crews: any[], employees: any[], ingredients: any[], skus: any[], employeeRateHistory: any[], materialPriceHistory: any[] }) => {
   const currentStageIdx = STAGES.findIndex(s => s.name === batch.currentStage);
   const nextStage = STAGES[currentStageIdx + 1] || STAGES[currentStageIdx];
-  const recipe = (RECIPES || []).find(r => r.id === batch.recipeId);
-  const crew = (CREWS || []).find(c => c.id === batch.crewId);
+  const recipe = (recipes || []).find(r => r.id === batch.recipeId);
+  const crew = (crews || []).find(c => c.id === batch.crewId);
   
   // Form State
   const [labour, setLabour] = useState<Record<string, { std: number, ot: number }>>(
@@ -406,12 +430,12 @@ const AdvanceStageModal = ({ batch, onClose }: { batch: any, onClose: () => void
   const labourCosts = useMemo(() => {
     return Object.keys(labour).map((empId) => {
       const hours = labour[empId];
-      const employee = (EMPLOYEES || []).find(e => e.id === empId);
-      const rates = getEmployeeRate(empId, new Date().toISOString());
+      const employee = (employees || []).find(e => e.id === empId);
+      const rates = getEmployeeRate(empId, new Date().toISOString(), employeeRateHistory);
       const cost = (hours.std * rates.standardRate) + (hours.ot * rates.overtimeRate);
       return { empId, name: employee?.name, cost, rates };
     });
-  }, [labour]);
+  }, [labour, employees, employeeRateHistory]);
 
   const totalLabourCost = labourCosts.reduce((acc, curr) => acc + curr.cost, 0);
 
@@ -420,7 +444,7 @@ const AdvanceStageModal = ({ batch, onClose }: { batch: any, onClose: () => void
     if (!recipeStage) return [];
     
     return (recipeStage.ingredients || []).map(ing => {
-      const priceInfo = getMaterialPrice(ing.ingredientId, new Date().toISOString());
+      const priceInfo = getMaterialPrice(ing.ingredientId, new Date().toISOString(), materialPriceHistory, ingredients);
       const batchQty = ing.quantity * (batch.plannedQty / (recipe?.yieldUnits || 1));
       const cost = batchQty * priceInfo.price;
       const stdCost = batchQty * priceInfo.standardCost;
@@ -428,14 +452,14 @@ const AdvanceStageModal = ({ batch, onClose }: { batch: any, onClose: () => void
       
       return {
         ...ing,
-        name: (INGREDIENTS || []).find(i => i.id === ing.ingredientId)?.name,
+        name: (ingredients || []).find(i => i.id === ing.ingredientId)?.name,
         batchQty,
         price: priceInfo.price,
         cost,
         variance
       };
     });
-  }, [batch, recipe]);
+  }, [batch, recipe, materialPriceHistory, ingredients]);
 
   const totalMaterialCost = stageIngredients.reduce((acc, curr) => acc + curr.cost, 0);
   const wasteCost = (waste.qty / (recipe?.yieldWeight || 1)) * totalMaterialCost; // Simplified waste cost
@@ -551,7 +575,7 @@ const AdvanceStageModal = ({ batch, onClose }: { batch: any, onClose: () => void
                       onChange={(e) => setPackagingSku(e.target.value)}
                     >
                       <option value="">Select SKU...</option>
-                      {(SKUS || []).filter(s => s.recipeId === batch.recipeId).map(sku => (
+                      {(skus || []).filter(s => s.recipeId === batch.recipeId).map(sku => (
                         <option key={sku.id} value={sku.id}>{sku.name}</option>
                       ))}
                     </select>
@@ -671,7 +695,7 @@ const AdvanceStageModal = ({ batch, onClose }: { batch: any, onClose: () => void
   );
 };
 
-const NewBatchModal = ({ onClose }: { onClose: () => void }) => {
+const NewBatchModal = ({ onClose, recipes, branches, crews }: { onClose: () => void, recipes: any[], branches: any[], crews: any[] }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-charcoal/60 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-warm-cream w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
@@ -684,21 +708,21 @@ const NewBatchModal = ({ onClose }: { onClose: () => void }) => {
             <label className="text-[10px] uppercase font-bold text-charcoal/60">Select Recipe</label>
             <select className="w-full px-4 py-2 rounded-lg border border-charcoal/10 outline-none bg-white text-sm">
               <option value="">Select Recipe...</option>
-              {(RECIPES || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {(recipes || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] uppercase font-bold text-charcoal/60">Select Branch</label>
             <select className="w-full px-4 py-2 rounded-lg border border-charcoal/10 outline-none bg-white text-sm">
               <option value="">Select Branch...</option>
-              {(BRANCHES || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(branches || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] uppercase font-bold text-charcoal/60">Select Crew</label>
             <select className="w-full px-4 py-2 rounded-lg border border-charcoal/10 outline-none bg-white text-sm">
               <option value="">Select Crew...</option>
-              {(CREWS || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {(crews || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="space-y-2">

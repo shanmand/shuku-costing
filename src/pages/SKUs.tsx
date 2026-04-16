@@ -17,12 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import { 
-  SKUS, 
-  RECIPES, 
-  BRANCHES, 
-  INGREDIENTS 
-} from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 // --- Helpers ---
 
@@ -51,10 +46,10 @@ const Badge = ({ children, color = 'gray' }: { children: React.ReactNode, color?
   );
 };
 
-const SKUCard = ({ sku }: { sku: any, key?: any }) => {
+const SKUCard = ({ sku, recipes, branches }: { sku: any, recipes: any[], branches: any[], key?: any }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const recipe = (RECIPES || []).find(r => r.id === sku.recipeId);
-  const branch = (BRANCHES || []).find(b => b.id === sku.branchId);
+  const recipe = (recipes || []).find(r => r.id === sku.recipeId);
+  const branch = (branches || []).find(b => b.id === sku.branchId);
   
   const margin = ((sku.sellingPrice - sku.standardCost) / sku.sellingPrice) * 100;
   const marginColor = margin > 30 ? 'green' : margin >= 15 ? 'amber' : 'red';
@@ -211,7 +206,7 @@ const SKUCard = ({ sku }: { sku: any, key?: any }) => {
   );
 };
 
-const NewSKUModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+const NewSKUModal = ({ isOpen, onClose, recipes, branches }: { isOpen: boolean, onClose: () => void, recipes: any[], branches: any[] }) => {
   if (!isOpen) return null;
 
   return (
@@ -236,7 +231,7 @@ const NewSKUModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase">Recipe</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
-              {(RECIPES || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {(recipes || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -246,7 +241,7 @@ const NewSKUModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase">Branch</label>
             <select className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
-              {(BRANCHES || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {(branches || []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -287,6 +282,14 @@ const NewSKUModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void
 // --- Main Page ---
 
 export default function SKUsPage() {
+  const { 
+    skus: SKUS, 
+    recipes: RECIPES, 
+    branches: BRANCHES, 
+    loading,
+    saveItem
+  } = useData();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -297,6 +300,14 @@ export default function SKUsPage() {
       sku.clientName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [searchTerm]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -361,7 +372,7 @@ export default function SKUsPage() {
       {/* SKU List */}
       <div className="space-y-4">
         {filteredSKUs.map(sku => (
-          <SKUCard key={sku.id} sku={sku} />
+          <SKUCard key={sku.id} sku={sku} recipes={RECIPES} branches={BRANCHES} />
         ))}
         
         {filteredSKUs.length === 0 && (
@@ -372,7 +383,7 @@ export default function SKUsPage() {
         )}
       </div>
 
-      <NewSKUModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <NewSKUModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} recipes={RECIPES} branches={BRANCHES} />
     </div>
   );
 }

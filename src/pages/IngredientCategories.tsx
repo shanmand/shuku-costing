@@ -13,7 +13,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { INGREDIENT_CATEGORIES, INGREDIENTS } from '../data/entities';
+import { useData } from '../contexts/DataContext';
 
 // --- Components ---
 
@@ -115,6 +115,13 @@ const CategoryRow = ({ category, ingredients, onEdit, onDelete }: any) => {
 // --- Main Page ---
 
 export default function IngredientCategories() {
+  const { 
+    categories: INGREDIENT_CATEGORIES, 
+    ingredients: INGREDIENTS, 
+    loading,
+    saveItem
+  } = useData();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({ name: '', description: '', isAllergenCategory: false });
@@ -132,6 +139,14 @@ export default function IngredientCategories() {
     setIsModalOpen(false);
     setFormData({ name: '', description: '', isAllergenCategory: false });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-amber-honey border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
